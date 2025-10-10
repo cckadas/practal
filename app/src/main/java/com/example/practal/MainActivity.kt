@@ -27,6 +27,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.practal.ui.theme.Bagel
 import com.example.practal.ui.theme.Cherry
+import com.example.practal.ui.theme.Montserrat
 import com.example.practal.ui.theme.Poppins
 
 class MainActivity : ComponentActivity() {
@@ -42,20 +43,27 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun PractalApp() {
     val navController = rememberNavController()
-    NavHost(navController, startDestination = "leaderboard") {
+
+    NavHost(navController, startDestination = "landing") {
         composable("landing") { LandingScreen(navController) }
         composable("login") { LoginScreen(navController) }
         composable("signup") { SignUpScreen(navController) }
         composable("welcome_profile") { WelcomeProfileScreen(navController, "username") }
         composable("photo_upload") { PhotoUploadScreen(navController) }
         composable("intro") { IntroductionScreen(navController) }
-        composable("details") { DetailsScreen(navController) }
+        composable("details") { MusicBackgroundRegistrationScreen(navController) }
         composable("done") { CompletedProfileScreen(navController, "username") }
         composable("dashboard") { DashboardScreen(navController, "username") }
-        composable("leaderboard") { LeaderboardScreen(navController) }
-        composable("challenge") { DetailsScreen(navController) }
+
+
+        composable("challenges") { ChallengeScreen(navController) }
+        composable("challengeDetail/{challengeId}") { backStackEntry ->
+            val challengeId = backStackEntry.arguments?.getString("challengeId")?.toIntOrNull() ?: 0
+            ChallengeDetailScreen(navController, challengeId)
+        }
     }
 }
+
 
 
 val LightGreen = Color(0xFFB9D8A7)
@@ -91,8 +99,8 @@ fun LandingScreen(navController: NavHostController) {
                     text = "Practal",
                     fontSize = 64.sp,
                     fontWeight = FontWeight.Bold,
-                    fontFamily = Bagel,
-                    letterSpacing = 2.sp,
+                    fontFamily = Montserrat,
+                    letterSpacing = (-2).sp,
                     color = DarkGreen
                 )
             }

@@ -25,14 +25,14 @@ fun SignUpScreen(navController: NavHostController) {
             .fillMaxSize()
             .background(LightGreen)
     ) {
-        // Green top section with title and back button
+
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 60.dp, start = 24.dp, end = 24.dp),
             horizontalAlignment = Alignment.Start
         ) {
-            // Back arrow (optional)
+
             IconButton(onClick = { navController.popBackStack() }) {
                 Icon(
                     imageVector = Icons.Default.ArrowBack,
@@ -52,11 +52,10 @@ fun SignUpScreen(navController: NavHostController) {
             )
         }
 
-        // White bottom surface overlapping the green area
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight(0.75f) // Controls how high the white part goes
+                .fillMaxHeight(0.75f)
                 .align(Alignment.BottomCenter),
             shape = RoundedCornerShape(topStart = 40.dp, topEnd = 40.dp),
             color = Color.White
@@ -69,7 +68,7 @@ fun SignUpScreen(navController: NavHostController) {
             ) {
                 Spacer(modifier = Modifier.height(32.dp))
 
-// Username
+
                 OutlinedTextField(
                     value = "",
                     onValueChange = {},
@@ -78,7 +77,7 @@ fun SignUpScreen(navController: NavHostController) {
                     modifier = Modifier.fillMaxWidth().height(55.dp),
                     shape = RoundedCornerShape(30.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = Color(0xFFF5F5F5),   // light gray bg
+                        focusedContainerColor = Color(0xFFF5F5F5),
                         unfocusedContainerColor = Color(0xFFF5F5F5),
                         focusedBorderColor = DarkGreen,
                         unfocusedBorderColor = Color.Transparent,
@@ -89,7 +88,7 @@ fun SignUpScreen(navController: NavHostController) {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-// Password
+
                 OutlinedTextField(
                     value = "",
                     onValueChange = {},
@@ -109,7 +108,7 @@ fun SignUpScreen(navController: NavHostController) {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-// Password
+
                 OutlinedTextField(
                     value = "",
                     onValueChange = {},
@@ -129,7 +128,7 @@ fun SignUpScreen(navController: NavHostController) {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-// Password
+
                 OutlinedTextField(
                     value = "",
                     onValueChange = {},

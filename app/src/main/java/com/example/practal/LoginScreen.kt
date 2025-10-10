@@ -119,7 +119,7 @@ fun LoginScreen(navController: NavHostController) {
                 Spacer(modifier = Modifier.height(32.dp))
 
                 Button(
-                    onClick = { },
+                    onClick = { navController.navigate("dashboard") },
                     colors = ButtonDefaults.buttonColors(containerColor = DarkGreen),
                     modifier = Modifier.fillMaxWidth().height(55.dp),
                     shape = RoundedCornerShape(30.dp)
@@ -132,7 +132,7 @@ fun LoginScreen(navController: NavHostController) {
                 Spacer(modifier = Modifier.height(12.dp))
 
                 OutlinedButton(
-                    onClick = { },
+                    onClick = { navController.navigate("dashboard") },
                     modifier = Modifier.fillMaxWidth().height(55.dp),
                     shape = RoundedCornerShape(30.dp)
                 ) {

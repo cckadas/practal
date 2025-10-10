@@ -4,6 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -203,78 +205,89 @@ fun IntroductionScreen(navController: NavHostController) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DetailsScreen(navController: NavHostController) {
-    var pronouns by remember { mutableStateOf("") }
-    var birthday by remember { mutableStateOf("") }
-    var zodiac by remember { mutableStateOf("") }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(LightGreen)
-            .padding(horizontal = 32.dp)
-    ) {
-
-        Text(
-            text = "Add details",
-            fontSize = 32.sp,
-            fontWeight = FontWeight.Bold,
-            fontFamily = Poppins,
-            color = DarkGreen,
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = 128.dp)
-        )
+fun MusicBackgroundRegistrationScreen(navController: NavHostController) {
+    var instruments by remember { mutableStateOf("") }
+    var skillLevel by remember { mutableStateOf("") }
+    var goals by remember { mutableStateOf("") }
+    var genres by remember { mutableStateOf("") }
+    var projects by remember { mutableStateOf("") }
 
 
-        Surface(
-            modifier = Modifier
-                .align(Alignment.Center)
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp),
-            shape = RoundedCornerShape(24.dp),
-            color = WhiteBox,
-            shadowElevation = 4.dp
-        ) {
-            Column(
-                modifier = Modifier
-                    .padding(24.dp)
-                    .fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                listOf(
-                    Pair("Pronouns", pronouns),
-                    Pair("Birthday", birthday),
-                    Pair("Zodiac Sign", zodiac)
-                ).forEachIndexed { index, (label, value) ->
-                    OutlinedTextField(
-                        value = value,
-                        onValueChange = {
-                            when (index) {
-                                0 -> pronouns = it
-                                1 -> birthday = it
-                                2 -> zodiac = it
-                            }
-                        },
-                        label = { Text(label) },
-                        singleLine = true,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp),
-                        shape = RoundedCornerShape(30.dp),
+    Scaffold(
+        containerColor = LightGreen,
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = {
+                    Text(
+                        ""
+
                     )
-                    if (index < 2) Spacer(modifier = Modifier.height(16.dp))
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent),
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = DarkGreen)
+                    }
                 }
-            }
+            )
         }
-
+    ) { padding ->
 
         Column(
             modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 72.dp),
+                .padding(padding)
+                .padding(horizontal = 24.dp, vertical = 8.dp)
+                .fillMaxSize()
+                .background(WhiteBox, RoundedCornerShape(24.dp))
+                .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+
+            Text(
+                "Tell us about your musical background",
+                fontFamily = Poppins,
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+                color = CardAccent
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            InputField("Instruments Played", instruments) { instruments = it }
+            Spacer(modifier = Modifier.height(16.dp))
+
+            InputField("Skill Level", skillLevel) { skillLevel = it }
+            Spacer(modifier = Modifier.height(16.dp))
+
+            InputField("Practice Goals", goals) { goals = it }
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Divider(thickness = 1.dp, color = LightGreen)
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                "Optional Information",
+                fontFamily = Poppins,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 18.sp,
+                color = DarkGreen
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+            InputField("Favorite Genres", genres) { genres = it }
+            Spacer(modifier = Modifier.height(16.dp))
+            InputField("Current Projects", projects) { projects = it }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+
+            UploadButton(
+                icon = Icons.Default.MusicNote,
+                label = "Add Demo Recordings"
+            ) { /* TODO: Implement audio picker */ }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
             Button(
                 onClick = { navController.navigate("done") },
                 modifier = Modifier
@@ -283,15 +296,38 @@ fun DetailsScreen(navController: NavHostController) {
                 shape = RoundedCornerShape(24.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = DarkGreen)
             ) {
-                Text("Enter", color = Color.White, fontSize = 22.sp)
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            TextButton(onClick = { navController.navigate("done") }) {
-                Text("Skip", color = WhiteBox, fontWeight = FontWeight.Bold, fontSize = 22.sp)
+                Text("Submit", color = Color.White, fontSize = 18.sp, fontFamily = Poppins)
             }
         }
+    }
+}
+
+
+@Composable
+fun InputField(label: String, value: String, onValueChange: (String) -> Unit) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(label) },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+    )
+}
+
+@Composable
+fun UploadButton(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, onClick: () -> Unit) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp),
+        shape = RoundedCornerShape(24.dp),
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = DarkGreen)
+    ) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(24.dp))
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(label, fontSize = 16.sp, fontFamily = Poppins)
     }
 }
 
@@ -337,7 +373,7 @@ fun CompletedProfileScreen(navController: NavHostController, username: String) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text("@$username", fontWeight = FontWeight.Bold, color = DarkGreen)
                     Text(
-                        "“This is an introduction any greeter would love to meet you!”",
+                        "“Lorem ipsum dolor sit amet, consectetur adipiscing elit.”",
                         textAlign = TextAlign.Center,
                         color = Color.DarkGray,
                         fontSize = 14.sp
