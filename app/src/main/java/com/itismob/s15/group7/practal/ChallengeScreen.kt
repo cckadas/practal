@@ -88,7 +88,7 @@ fun ChallengeScreen(navController: NavHostController) {
         LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             items(challenges) { challenge ->
                 ChallengeCard(challenge = challenge, onClick = {
-                    navController.navigate("challengeDetail/${challenge.id}")
+                    navController.navigate("challenge_detail/${challenge.id}")
                 })
             }
         }

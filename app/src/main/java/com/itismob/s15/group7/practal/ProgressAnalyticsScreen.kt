@@ -20,19 +20,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavHostController
 import com.itismob.s15.group7.practal.ui.theme.Poppins
 
 @Composable
-fun ProgressAnalyticsScreen(username: String, padding: PaddingValues) {
+fun ProgressAnalyticsScreen(username: String, navController: NavHostController) {
     var selectedFilter by remember { mutableStateOf("Weekly") }
     val filters = listOf("Weekly", "Monthly", "Yearly")
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(padding)
             .background(WhiteBox)
             .verticalScroll(rememberScrollState())
+            .padding(bottom = 92.dp)
     ) {
         // Header
         Column(
@@ -40,6 +41,7 @@ fun ProgressAnalyticsScreen(username: String, padding: PaddingValues) {
                 .fillMaxWidth()
                 .background(DarkGreen)
                 .padding(24.dp)
+                .height(64.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -287,8 +289,6 @@ fun ProgressAnalyticsScreen(username: String, padding: PaddingValues) {
                 InstrumentBreakdownItem("Voice", 10, LightGreen)
             }
         }
-
-        Spacer(modifier = Modifier.height(32.dp))
     }
 }
 

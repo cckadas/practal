@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavHostController
 import com.itismob.s15.group7.practal.ui.theme.Poppins
 
 val Gold = Color(0xFFFFD700)
@@ -38,7 +39,7 @@ val Bronze = Color(0xFFCD7F32)
 
 
 @Composable
-fun LeaderboardScreen(padding: PaddingValues) {
+fun LeaderboardScreen(navController: NavHostController) {
     val leaderboard = listOf(
         LeaderboardEntry("beathoven", 980),
         LeaderboardEntry("mozart123", 920),
@@ -54,29 +55,41 @@ fun LeaderboardScreen(padding: PaddingValues) {
 
     Column(
         modifier = Modifier
-            .padding(padding)
             .fillMaxSize()
-            .background(WhiteBox)
-            .padding(horizontal = 16.dp, vertical = 24.dp),
+            .background(WhiteBox),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(
-            text = "Leaderboard",
-            fontSize = 32.sp,
-            fontWeight = FontWeight.Bold,
-            color = DarkGreen,
-            fontFamily = Poppins,
-            modifier = Modifier.padding(top = 8.dp)
-        )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(DarkGreen)
+                .padding(horizontal = 16.dp, vertical = 24.dp)
+                .height(64.dp)
+        ) {
+            Text(
+                text = "Leaderboard",
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                fontFamily = Poppins
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "See how you rank among other musicians",
+                fontSize = 14.sp,
+                color = Color.White.copy(alpha = 0.9f),
+                fontFamily = Poppins
+            )
+        }
 
 
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(130.dp),
-            shape = RoundedCornerShape(24.dp),
+                .height(140.dp)
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            shape = RoundedCornerShape(16.dp),
             color = WhiteBox,
             shadowElevation = 8.dp
         ) {
@@ -107,7 +120,12 @@ fun LeaderboardScreen(padding: PaddingValues) {
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(
+                start = 16.dp,
+                end = 16.dp,
+                bottom = 92.dp
+            ),
         ) {
             itemsIndexed(leaderboard) { index, entry ->
                 val rank = index + 1
