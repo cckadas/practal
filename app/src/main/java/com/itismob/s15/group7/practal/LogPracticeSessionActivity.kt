@@ -42,6 +42,7 @@ fun LogPracticeSessionScreen(navController: NavHostController) {
         modifier = Modifier
             .fillMaxSize()
             .background(WhiteBox)
+            .height(64.dp)
     ) {
         // Header
         Box(
