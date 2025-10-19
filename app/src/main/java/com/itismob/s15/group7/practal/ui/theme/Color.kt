@@ -1,4 +1,4 @@
-package com.example.practal.ui.theme
+package com.itismob.s15.group7.practal.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

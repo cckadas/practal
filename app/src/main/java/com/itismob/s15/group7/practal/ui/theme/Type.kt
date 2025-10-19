@@ -1,4 +1,4 @@
-package com.example.practal.ui.theme
+package com.itismob.s15.group7.practal.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
@@ -6,7 +6,8 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
-import com.example.practal.R
+import com.itismob.s15.group7.practal.R
+
 
 val Poppins = FontFamily(
     Font(R.font.poppins_regular, FontWeight.Normal),

@@ -1,4 +1,4 @@
-package com.example.practal
+package com.itismob.s15.group7.practal
 
 
 import androidx.compose.foundation.background
@@ -11,12 +11,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.example.practal.ui.theme.Poppins
+import com.itismob.s15.group7.practal.ui.theme.Poppins
 
 @Composable
 fun SignUpScreen(navController: NavHostController) {

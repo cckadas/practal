@@ -1,6 +1,5 @@
-package com.example.practal.ui.theme
+package com.itismob.s15.group7.practal.ui.theme
 
-import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme

@@ -5,13 +5,13 @@ plugins {
 }
 
 android {
-    namespace = "com.example.practal"
+    namespace = "com.itismob.s15.group7.practal"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.practal"
+        applicationId = "com.itismob.s15.group7.practal"
         minSdk = 24
-        targetSdk = 35
+        targetSdk = 34
         versionCode = 1
         versionName = "1.0"
 
@@ -49,6 +49,8 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation(libs.androidx.navigation.compose)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -56,7 +58,6 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
-    implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.material.icons.extended)
 
 }

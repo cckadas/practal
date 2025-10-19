@@ -1,4 +1,4 @@
-package com.example.practal
+package com.itismob.s15.group7.practal
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -30,11 +30,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.practal.CardAccent
-import com.example.practal.DarkGreen
-import com.example.practal.LeaderboardEntry
-import com.example.practal.WhiteBox
-import com.example.practal.ui.theme.Poppins
+import com.itismob.s15.group7.practal.ui.theme.Poppins
 
 val Gold = Color(0xFFFFD700)
 val Silver = Color(0xFFC0C0C0)

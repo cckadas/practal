@@ -1,4 +1,4 @@
-package com.example.practal
+package com.itismob.s15.group7.practal
 
 import org.junit.Test
 

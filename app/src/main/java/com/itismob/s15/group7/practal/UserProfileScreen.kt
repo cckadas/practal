@@ -1,4 +1,4 @@
-package com.example.practal
+package com.itismob.s15.group7.practal
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -26,7 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.example.practal.ui.theme.Poppins
+import com.itismob.s15.group7.practal.ui.theme.Poppins
 
 data class Achievement(
     val id: Int,
