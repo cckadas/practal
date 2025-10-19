@@ -30,10 +30,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.itismob.s15.group7.practal.CardAccent
-import com.itismob.s15.group7.practal.DarkGreen
-import com.itismob.s15.group7.practal.LeaderboardEntry
-import com.itismob.s15.group7.practal.WhiteBox
 import com.itismob.s15.group7.practal.ui.theme.Poppins
 
 val Gold = Color(0xFFFFD700)
