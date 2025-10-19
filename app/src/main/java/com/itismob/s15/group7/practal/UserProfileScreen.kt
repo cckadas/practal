@@ -152,53 +152,6 @@ fun UserProfileScreen(username: String, navController: NavHostController) {
     }
 }
 
-@Composable
-fun UserProfileScreen(username: String, padding: PaddingValues, navController: NavHostController) {
-    val userLevel = UserLevel(
-        level = 12,
-        currentXP = 3450,
-        xpToNextLevel = 4000,
-        title = "Musical Virtuoso"
-    )
-    
-    val achievements = listOf(
-        Achievement(1, "Century Practice", "Practiced for 100+ hours", "🎯", true, 100, "Practice", "Oct 15, 2025"),
-        Achievement(2, "30-Day Streak", "Maintained a 30-day practice streak", "🔥", true, 100, "Consistency", "Oct 10, 2025"),
-        Achievement(3, "Challenge Master", "Completed 10 challenges", "🏆", true, 100, "Challenges", "Oct 5, 2025"),
-        Achievement(4, "Technique Pro", "Mastered 5 techniques", "⚡", true, 100, "Mastery", "Sep 28, 2025"),
-        Achievement(5, "Repertoire Complete", "Learned 20 pieces", "🎼", false, 65, "Repertoire", null),
-        Achievement(6, "Community Star", "100+ community engagements", "⭐", false, 80, "Community", null),
-        Achievement(7, "Speed Demon", "Practiced 7 days in a row", "⚡", true, 100, "Consistency", "Sep 20, 2025"),
-        Achievement(8, "Night Owl", "Practiced after midnight 10 times", "🦉", false, 40, "Special", null),
-        Achievement(9, "Early Bird", "Practiced before 6 AM 10 times", "🌅", false, 20, "Special", null),
-        Achievement(10, "Social Butterfly", "Followed 50 musicians", "🦋", true, 100, "Community", "Sep 15, 2025")
-    )
-
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(padding)
-            .background(WhiteBox)
-    ) {
-        // Profile Header
-        item {
-            ProfileHeader(username, userLevel)
-            Spacer(modifier = Modifier.height(24.dp))
-        }
-
-        // User Info Section
-        item {
-            ProfileInfoSection()
-            Spacer(modifier = Modifier.height(24.dp))
-        }
-
-        // Recent Achievements
-        item {
-            ProfileRecentAchievements(navController, achievements)
-            Spacer(modifier = Modifier.height(24.dp))
-        }
-    }
-}
 
 // Profile Header
 @Composable

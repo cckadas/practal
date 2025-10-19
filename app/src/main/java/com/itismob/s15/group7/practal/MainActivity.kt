@@ -36,7 +36,7 @@ class MainActivity : ComponentActivity() {
 fun PractalApp() {
     val navController = rememberNavController()
 
-    NavHost(navController, startDestination = "allAchievements") {
+    NavHost(navController, startDestination = "landing") {
         composable("landing") { LandingScreen(navController) }
         composable("login") { LoginScreen(navController) }
         composable("signup") { SignUpScreen(navController) }
@@ -49,13 +49,13 @@ fun PractalApp() {
 
 
         composable("challenges") { ChallengeScreen(navController) }
-        composable("challengeDetail/{challengeId}") { backStackEntry ->
-            val challengeId = backStackEntry.arguments?.getString("challengeId")?.toIntOrNull() ?: 0
+        composable("challenge_detail/{challenge_id}") { backStackEntry ->
+            val challengeId = backStackEntry.arguments?.getString("challenge_id")?.toIntOrNull() ?: 0
             ChallengeDetailScreen(navController, challengeId)
         }
 
-        composable("logPractice") { LogPracticeSessionScreen(navController) }
-        composable("allAchievements") { AchievementsScreen(navController) }
+        composable("log_practice") { LogPracticeSessionScreen(navController) }
+        composable("all_achievements") { AchievementsScreen(navController) }
         composable("profile/{username}") { backStackEntry ->
             val username = backStackEntry.arguments?.getString("username") ?: "username"
             UserProfileScreen(username, navController)

@@ -1,6 +1,7 @@
 package com.itismob.s15.group7.practal
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -43,7 +44,7 @@ fun DashboardScreen(navController: NavHostController, username: String) {
         bottomBar = { DashboardBottomBar(selectedTab) { selectedTab = it } },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { /* TODO: handle add action */ },
+                onClick = { navController.navigate("log_practice") },
                 containerColor = DarkGreen,
                 shape = CircleShape
             ) {
@@ -60,7 +61,9 @@ fun DashboardScreen(navController: NavHostController, username: String) {
     ) { padding ->
         when (selectedTab) {
             "home" -> DashboardHome(username, padding, navController)
-            "leaderboard" -> LeaderboardScreen(padding)
+            "progress" -> ProgressAnalyticsScreen(username, navController)
+            "leaderboard" -> LeaderboardScreen(navController)
+            "clubs" -> ClubsScreen(navController)
             else -> DashboardHome(username, padding, navController)
         }
     }
@@ -82,41 +85,49 @@ fun DashboardHome(username: String, padding: PaddingValues, navController: NavHo
             .background(WhiteBox)
     ) {
 
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .background(DarkGreen)
+                .padding(24.dp)
+                .height(64.dp)
         ) {
-            Column {
-                Text(
-                    "Good afternoon,",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.Black,
-                    fontFamily = Poppins
-                )
-                Text(
-                    "@$username!",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = CardAccent,
-                    fontFamily = Poppins
-                )
-            }
-
-            Surface(
-                shape = CircleShape,
-                color = WhiteBox,
-                modifier = Modifier.size(48.dp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = Icons.Default.Person,
-                    contentDescription = "Profile",
-                    tint = CardAccent,
-                    modifier = Modifier.padding(8.dp)
-                )
+                Column {
+                    Text(
+                        text = "Good Afternoon,",
+                        fontSize = 26.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        fontFamily = Poppins
+                    )
+                    Text(
+                        text = "@$username!",
+                        fontSize = 18.sp,
+                        color = Color.White.copy(alpha = 0.8f),
+                        fontFamily = Poppins
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .size(60.dp)
+                        .clip(CircleShape)
+                        .background(Color.White)
+                        .clickable { navController.navigate("profile/${username}")  },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = "Profile",
+                        tint = DarkGreen,
+                        modifier = Modifier.size(36.dp)
+                    )
+                }
             }
         }
 
@@ -201,7 +212,6 @@ fun PostCard(post: Post) {
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            // 👤 Header
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(12.dp)
@@ -366,14 +376,14 @@ fun DashboardBottomBar(selectedTab: String, onTabSelected: (String) -> Unit) {
             }
         )
         NavigationBarItem(
-            selected = selectedTab == "friends",
-            onClick = { onTabSelected("friends") },
+            selected = selectedTab == "clubs",
+            onClick = { onTabSelected("clubs") },
             icon = {
                 Icon(
                     imageVector = Icons.Default.Group,
-                    contentDescription = "Friends",
+                    contentDescription = "Clubs",
                     modifier = Modifier.size(32.dp),
-                    tint = if (selectedTab == "friends") DarkGreen else Color.Gray
+                    tint = if (selectedTab == "clubs") DarkGreen else Color.Gray
                 )
             }
         )

@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavHostController
 import com.itismob.s15.group7.practal.ui.theme.Poppins
 
 data class Club(
@@ -32,7 +33,7 @@ data class Club(
 )
 
 @Composable
-fun ClubsScreen(padding: PaddingValues) {
+fun ClubsScreen(navController: NavHostController) {
     var selectedCategory by remember { mutableStateOf("All") }
     val categories = listOf("All", "Genre", "Instrument", "Skill Level", "Location", "Activity")
     
@@ -58,7 +59,6 @@ fun ClubsScreen(padding: PaddingValues) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(padding)
             .background(WhiteBox)
     ) {
         // Header
@@ -67,6 +67,7 @@ fun ClubsScreen(padding: PaddingValues) {
                 .fillMaxWidth()
                 .background(DarkGreen)
                 .padding(horizontal = 16.dp, vertical = 24.dp)
+                .height(64.dp)
         ) {
             Text(
                 text = "Clubs",
@@ -133,7 +134,12 @@ fun ClubsScreen(padding: PaddingValues) {
         )
 
         LazyColumn(
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+            contentPadding = PaddingValues(
+                start = 16.dp,
+                end = 16.dp,
+                top = 8.dp,
+                bottom = 92.dp
+            ),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(filteredClubs) { club ->
