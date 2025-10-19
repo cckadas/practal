@@ -337,7 +337,7 @@ fun MusicInfoScreen(navController: NavHostController) {
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    val instruments = listOf("🎹 Piano", "🎸 Guitar", "🎻 Violin", "🥁 Drums", "🎺 Trumpet", "🎼 Flute", "🎸 Bass",)
+                    val instruments = listOf("🎹 Piano", "🎸 Guitar", "🎻 Violin", "🥁 Drums",  "🎻 Cello", "🪈 Flute", "🎺 Trumpet", "🥁 Drums", "🎸 Bass")
 
                     instruments.forEach { instrument ->
                         val isSelected = instrument in selectedInstruments

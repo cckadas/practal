@@ -100,7 +100,7 @@ fun LandingScreen(navController: NavHostController) {
                 )
                 Text(
                     text = "Practal",
-                    fontSize = 64.sp,
+                    fontSize = 68.sp,
                     fontWeight = FontWeight.Bold,
                     fontFamily = Montserrat,
                     letterSpacing = (-2).sp,

@@ -506,7 +506,7 @@ fun ProfileRecentAchievements(navController: NavHostController, allAchievements:
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { navController.navigate("allAchievements") },
+                    .clickable { navController.navigate("all_achievements") },
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
