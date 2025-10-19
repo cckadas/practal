@@ -40,11 +40,15 @@ fun PractalApp() {
         composable("landing") { LandingScreen(navController) }
         composable("login") { LoginScreen(navController) }
         composable("signup") { SignUpScreen(navController) }
+
         composable("welcome_profile") { WelcomeProfileScreen(navController, "username") }
         composable("photo_upload") { PhotoUploadScreen(navController) }
         composable("intro") { IntroductionScreen(navController) }
-        composable("details") { MusicBackgroundRegistrationScreen(navController) }
-        composable("done") { CompletedProfileScreen(navController, "username") }
+        composable("music_info") { MusicInfoScreen(navController) }
+        composable("goal_skill_info") { GoalSkillInfoScreen(navController) }
+        composable("other_details") { OtherDetailsScreen(navController) }
+        composable("done") { CompletedProfileScreen(navController) }
+
         composable("dashboard") { DashboardScreen(navController, "username") }
 
 
