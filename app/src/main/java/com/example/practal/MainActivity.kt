@@ -4,28 +4,23 @@ package com.example.practal
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.practal.ui.theme.Bagel
 import com.example.practal.ui.theme.Cherry
 import com.example.practal.ui.theme.Montserrat
 import com.example.practal.ui.theme.Poppins
@@ -40,6 +35,7 @@ class MainActivity : ComponentActivity() {
 }
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PractalApp() {
     val navController = rememberNavController()
@@ -61,12 +57,19 @@ fun PractalApp() {
             val challengeId = backStackEntry.arguments?.getString("challengeId")?.toIntOrNull() ?: 0
             ChallengeDetailScreen(navController, challengeId)
         }
+
+        composable("logPractice") { LogPracticeSessionScreen(navController) }
+        composable("allAchievements") { AchievementsScreen(navController) }
+        composable("profile/{username}") { backStackEntry ->
+            val username = backStackEntry.arguments?.getString("username") ?: "username"
+            UserProfileScreen(username, navController)
+        }
     }
 }
 
 
 
-val LightGreen = Color(0xFFB9D8A7)
+val LightGreen = Color(0xFF9AB088)
 val DarkGreen = Color(0xFF264E36)
 val CardGreen = Color(0xFFA7C49C)
 val WhiteBox = Color(0xFFF6F8F5)
@@ -91,8 +94,8 @@ fun LandingScreen(navController: NavHostController) {
                 Text(
                     text = "WELCOME TO",
                     fontSize = 32.sp,
-                    fontWeight = FontWeight.Light,
-                    fontFamily = Cherry,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = Montserrat,
                     color = LightGreen
                 )
                 Text(
