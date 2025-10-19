@@ -1,21 +1,27 @@
 package com.example.practal
 
-import LeaderboardScreen
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
@@ -41,27 +47,14 @@ fun DashboardScreen(navController: NavHostController, username: String) {
     var selectedTab by remember { mutableStateOf("home") }
 
     Scaffold(
-        bottomBar = { DashboardBottomBar(selectedTab) { selectedTab = it } },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { /* TODO: handle add action */ },
-                containerColor = DarkGreen,
-                shape = CircleShape
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Add",
-                    tint = Color.White,
-                    modifier = Modifier.size(32.dp)
-                )
-            }
-        },
-        floatingActionButtonPosition = FabPosition.End,
+        bottomBar = { DashboardBottomBar(selectedTab, navController) { selectedTab = it } },
         containerColor = WhiteBox
     ) { padding ->
         when (selectedTab) {
             "home" -> DashboardHome(username, padding, navController)
+            "progress" -> ProgressAnalyticsScreen(username, padding)
             "leaderboard" -> LeaderboardScreen(padding)
+            "clubs" -> ClubsScreen(padding)
             else -> DashboardHome(username, padding, navController)
         }
     }
@@ -110,7 +103,9 @@ fun DashboardHome(username: String, padding: PaddingValues, navController: NavHo
             Surface(
                 shape = CircleShape,
                 color = WhiteBox,
-                modifier = Modifier.size(48.dp)
+                modifier = Modifier
+                    .size(48.dp)
+                    .clickable { navController.navigate("profile/$username") }
             ) {
                 Icon(
                     imageVector = Icons.Default.Person,
@@ -128,12 +123,26 @@ fun DashboardHome(username: String, padding: PaddingValues, navController: NavHo
                 .padding(top = 16.dp, start = 12.dp, end = 12.dp)
         ) {
 
+
+            // XP Widget
+            item {
+                XPWidget()
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
+            // Challenge Widget
             item {
                 ViewChallengeCard(navController)
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
+            // Posts Filter Header
+            item {
+                PostsFilterHeader()
+                Spacer(modifier = Modifier.height(12.dp))
+            }
 
+            // Posts
             items(posts) { post ->
                 PostCard(post)
                 Spacer(modifier = Modifier.height(12.dp))
@@ -295,7 +304,7 @@ fun PostCard(post: Post) {
                     }
                     IconButton(onClick = { /* TODO: Share */ }) {
                         Icon(
-                            Icons.Default.Send,
+                            Icons.AutoMirrored.Filled.Send,
                             contentDescription = "Share",
                             tint = Color.Gray
                         )
@@ -324,59 +333,242 @@ fun PostCard(post: Post) {
 
 // 🧭 BOTTOM NAVIGATION BAR
 @Composable
-fun DashboardBottomBar(selectedTab: String, onTabSelected: (String) -> Unit) {
-    NavigationBar(
-        containerColor = Color.White,
-        tonalElevation = 6.dp,
-        modifier = Modifier.height(80.dp)
+fun DashboardBottomBar(selectedTab: String, navController: NavHostController, onTabSelected: (String) -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(90.dp)
     ) {
-        NavigationBarItem(
-            selected = selectedTab == "home",
-            onClick = { onTabSelected("home") },
-            icon = {
-                Icon(
-                    imageVector = Icons.Default.Home,
-                    contentDescription = "Home",
-                    modifier = Modifier.size(32.dp),
-                    tint = if (selectedTab == "home") DarkGreen else Color.Gray
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(90.dp)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0f),
+                            Color.White.copy(alpha = 0.3f),
+                            Color.White
+                        )
+                    )
+                )
+        )
+        
+        NavigationBar(
+            containerColor = Color.White,
+            tonalElevation = 6.dp,
+            modifier = Modifier
+                .height(80.dp)
+                .align(Alignment.BottomCenter)
+        ) {
+            // Home
+            NavigationBarItem(
+                selected = selectedTab == "home",
+                onClick = { onTabSelected("home") },
+                icon = {
+                    Icon(
+                        imageVector = Icons.Default.Home,
+                        contentDescription = "Home",
+                        modifier = Modifier.size(28.dp)
+                    )
+                },
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = DarkGreen,
+                    unselectedIconColor = Color.Gray,
+                    indicatorColor = DarkGreen.copy(alpha = 0.1f)
+                )
+            )
+            
+            // Progress
+            NavigationBarItem(
+                selected = selectedTab == "progress",
+                onClick = { onTabSelected("progress") },
+                icon = {
+                    Icon(
+                        imageVector = Icons.Default.BarChart,
+                        contentDescription = "Progress",
+                        modifier = Modifier.size(28.dp)
+                    )
+                },
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = DarkGreen,
+                    unselectedIconColor = Color.Gray,
+                    indicatorColor = DarkGreen.copy(alpha = 0.1f)
+                )
+            )
+            
+            // Center space for FAB
+            Spacer(modifier = Modifier.weight(1f))
+            
+            // Leaderboard
+            NavigationBarItem(
+                selected = selectedTab == "leaderboard",
+                onClick = { onTabSelected("leaderboard") },
+                icon = {
+                    Icon(
+                        imageVector = Icons.Default.EmojiEvents,
+                        contentDescription = "Leaderboard",
+                        modifier = Modifier.size(28.dp)
+                    )
+                },
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = DarkGreen,
+                    unselectedIconColor = Color.Gray,
+                    indicatorColor = DarkGreen.copy(alpha = 0.1f)
+                )
+            )
+            
+            // Clubs
+            NavigationBarItem(
+                selected = selectedTab == "clubs",
+                onClick = { onTabSelected("clubs") },
+                icon = {
+                    Icon(
+                        imageVector = Icons.Default.Groups,
+                        contentDescription = "Clubs",
+                        modifier = Modifier.size(28.dp)
+                    )
+                },
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = DarkGreen,
+                    unselectedIconColor = Color.Gray,
+                    indicatorColor = DarkGreen.copy(alpha = 0.1f)
+                )
+            )
+        }
+        
+        // Center Log Practice Button
+        Box(
+            modifier = Modifier
+                .size(56.dp)
+                .align(Alignment.TopCenter)
+                .offset(y = 4.dp)
+                .clip(CircleShape)
+                .background(DarkGreen)
+                .clickable { navController.navigate("logPractice") },
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = "Log Practice",
+                tint = Color.White,
+                modifier = Modifier.size(28.dp)
+            )
+        }
+    }
+}
+
+// XP Widget
+@Composable
+fun XPWidget() {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = DarkGreen),
+        shape = RoundedCornerShape(18.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Star,
+                        contentDescription = "Level",
+                        tint = LightGreen,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Level 12",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        fontFamily = Poppins
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(8.dp))
+
+                LinearProgressIndicator(
+                progress = { 0.86f },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(8.dp)
+                    .clip(RoundedCornerShape(4.dp)
+                    ),
+                    color = LightGreen,
+                    trackColor = Color.White.copy(alpha = 0.3f),
+                    strokeCap = ProgressIndicatorDefaults.LinearStrokeCap,
+                )
+                
+                Spacer(modifier = Modifier.height(4.dp))
+                
+                Text(
+                    text = "3,450 / 4,000 XP",
+                    fontSize = 12.sp,
+                    color = Color.White.copy(alpha = 0.9f),
+                    fontFamily = Poppins
                 )
             }
-        )
-        NavigationBarItem(
-            selected = selectedTab == "progress",
-            onClick = { onTabSelected("progress") },
-            icon = {
-                Icon(
-                    imageVector = Icons.Default.BarChart,
-                    contentDescription = "Progress",
-                    modifier = Modifier.size(32.dp),
-                    tint = if (selectedTab == "progress") DarkGreen else Color.Gray
-                )
-            }
-        )
-        NavigationBarItem(
-            selected = selectedTab == "leaderboard",
-            onClick = { onTabSelected("leaderboard") },
-            icon = {
-                Icon(
-                    imageVector = Icons.Default.EmojiEvents,
-                    contentDescription = "Leaderboard",
-                    modifier = Modifier.size(32.dp),
-                    tint = if (selectedTab == "leaderboard") DarkGreen else Color.Gray
-                )
-            }
-        )
-        NavigationBarItem(
-            selected = selectedTab == "friends",
-            onClick = { onTabSelected("friends") },
-            icon = {
-                Icon(
-                    imageVector = Icons.Default.Group,
-                    contentDescription = "Friends",
-                    modifier = Modifier.size(32.dp),
-                    tint = if (selectedTab == "friends") DarkGreen else Color.Gray
-                )
-            }
-        )
+            
+            Text(
+                text = " 🎯",
+                fontSize = 48.sp
+            )
+        }
+    }
+}
+
+// Posts Filter
+@Composable
+fun PostsFilterHeader() {
+    var selectedFilter by remember { mutableStateOf("latest") }
+    val selectedGray = Color(0xD2B8BEC7)
+    
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 4.dp),
+        horizontalArrangement = Arrangement.Start,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Latest Posts option
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = if (selectedFilter == "latest") selectedGray else Color.Transparent,
+            modifier = Modifier.clickable { selectedFilter = "latest" }
+        ) {
+            Text(
+                text = "Latest Posts",
+                fontSize = 16.sp,
+                fontWeight = if (selectedFilter == "latest") FontWeight.Bold else FontWeight.Normal,
+                color = if (selectedFilter == "latest") Color.White else Color.Black,
+                fontFamily = Poppins,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+        }
+        
+        Spacer(modifier = Modifier.width(12.dp))
+        
+        // Friends Posts
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = if (selectedFilter == "friends") selectedGray else Color.Transparent,
+            modifier = Modifier.clickable { selectedFilter = "friends" }
+        ) {
+            Text(
+                text = "Friends Posts",
+                fontSize = 16.sp,
+                fontWeight = if (selectedFilter == "friends") FontWeight.Bold else FontWeight.Normal,
+                color = if (selectedFilter == "friends") Color.White else Color.Black,
+                fontFamily = Poppins,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+        }
     }
 }
