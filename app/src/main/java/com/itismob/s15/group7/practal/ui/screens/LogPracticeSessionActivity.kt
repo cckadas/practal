@@ -1,4 +1,4 @@
-package com.itismob.s15.group7.practal
+package com.itismob.s15.group7.practal.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -18,9 +18,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.itismob.s15.group7.practal.DarkGreen
+import com.itismob.s15.group7.practal.LightGreen
+import com.itismob.s15.group7.practal.WhiteBox
 import com.itismob.s15.group7.practal.ui.theme.Poppins
 
 @Composable
@@ -44,7 +48,6 @@ fun LogPracticeSessionScreen(navController: NavHostController) {
             .background(WhiteBox)
             .height(64.dp)
     ) {
-        // Header
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -89,7 +92,6 @@ fun LogPracticeSessionScreen(navController: NavHostController) {
             }
         }
 
-        // Content
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -97,7 +99,6 @@ fun LogPracticeSessionScreen(navController: NavHostController) {
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            // Instrument Selection
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -192,7 +193,6 @@ fun LogPracticeSessionScreen(navController: NavHostController) {
                 }
             }
 
-            // Time Section
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -269,8 +269,7 @@ fun LogPracticeSessionScreen(navController: NavHostController) {
                             )
                         }
                     }
-                    
-                    // Duration Display
+
                     if (startTime.isNotEmpty() && endTime.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(12.dp))
                         Surface(
@@ -305,7 +304,6 @@ fun LogPracticeSessionScreen(navController: NavHostController) {
                 }
             }
 
-            // Notes
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -359,7 +357,6 @@ fun LogPracticeSessionScreen(navController: NavHostController) {
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Save Button
             Button(
                 onClick = {
                     if (instrument.isNotEmpty() && practiceFocus.isNotEmpty() && 
@@ -390,8 +387,7 @@ fun LogPracticeSessionScreen(navController: NavHostController) {
             
             Spacer(modifier = Modifier.height(20.dp))
         }
-        
-        // Success Dialog
+
         if (showSuccessDialog) {
             AlertDialog(
                 onDismissRequest = { showSuccessDialog = false },
@@ -416,7 +412,7 @@ fun LogPracticeSessionScreen(navController: NavHostController) {
                         Text(
                             "Practice session logged successfully!",
                             fontFamily = Poppins,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            textAlign = TextAlign.Center,
                             fontSize = 15.sp
                         )
                         Spacer(modifier = Modifier.height(8.dp))
@@ -425,7 +421,7 @@ fun LogPracticeSessionScreen(navController: NavHostController) {
                             fontFamily = Poppins,
                             fontSize = 14.sp,
                             color = Color.Gray,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            textAlign = TextAlign.Center
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         Surface(
@@ -485,7 +481,6 @@ fun LogPracticeSessionScreen(navController: NavHostController) {
     }
 }
 
-// calculate duration
 fun calculateDuration(start: String, end: String): String {
     return try {
         val startParts = start.split(":")

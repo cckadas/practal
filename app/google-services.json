@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "929419545953",
+    "project_id": "practal-b43b3",
+    "storage_bucket": "practal-b43b3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:929419545953:android:a1837343b037734f774920",
+        "android_client_info": {
+          "package_name": "com.itismob.s15.group7.practal"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBKWFROoOocU5ETTsRQgon35Ts1h-s-3xQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

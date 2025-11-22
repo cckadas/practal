@@ -1,5 +1,6 @@
-package com.itismob.s15.group7.practal
+package com.itismob.s15.group7.practal.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
@@ -22,10 +23,18 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import coil.compose.AsyncImage
+import com.itismob.s15.group7.practal.DarkGreen
+import com.itismob.s15.group7.practal.LightGreen
+import com.itismob.s15.group7.practal.WhiteBox
+import com.itismob.s15.group7.practal.domain.controller.UserViewModel
 import com.itismob.s15.group7.practal.ui.theme.Poppins
 
 data class Achievement(
@@ -41,20 +50,58 @@ data class Achievement(
 
 data class UserLevel(
     val level: Int,
+    val title: String,
     val currentXP: Int,
-    val xpToNextLevel: Int,
-    val title: String
+    val xpToNextLevel: Int
 )
 
-@Composable
-fun UserProfileScreen(username: String, navController: NavHostController) {
-    val userLevel = UserLevel(
-        level = 12,
-        currentXP = 3450,
-        xpToNextLevel = 4000,
-        title = "Musical Virtuoso"
+fun computeLevel(xp: Int): UserLevel {
+    val xpThresholds = listOf(
+        0,      // Level 1
+        100,    // Level 2
+        250,    // Level 3
+        500,    // Level 4
+        1000,   // Level 5
+        1500,   // Level 6
+        2000    // Level 7
     )
-    
+
+    var level = 1
+    for (i in xpThresholds.indices) {
+        if (xp >= xpThresholds[i]) {
+            level = i + 1
+        } else break
+    }
+
+    val xpToNext =
+        if (level < xpThresholds.size)
+            xpThresholds[level] - xp
+        else
+            0
+
+    val title = when (level) {
+        1, 2 -> "Beginner"
+        3, 4 -> "Intermediate"
+        5, 6 -> "Advanced"
+        else -> "Master"
+    }
+
+    return UserLevel(
+        level = level,
+        title = title,
+        currentXP = xp,
+        xpToNextLevel = xpToNext
+    )
+}
+
+
+
+
+@Composable
+fun UserProfileScreen(navController: NavHostController, userViewModel: UserViewModel) {
+
+    val loggedInUser by userViewModel.loggedInUser.collectAsState()
+
     val achievements = listOf(
         Achievement(1, "Century Practice", "Practiced for 100+ hours", "🎯", true, 100, "Practice", "Oct 15, 2025"),
         Achievement(2, "30-Day Streak", "Maintained a 30-day practice streak", "🔥", true, 100, "Consistency", "Oct 10, 2025"),
@@ -73,7 +120,7 @@ fun UserProfileScreen(username: String, navController: NavHostController) {
             .fillMaxSize()
             .background(WhiteBox)
     ) {
-                // Home button
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -89,16 +136,25 @@ fun UserProfileScreen(username: String, navController: NavHostController) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = Color.White,
-                            modifier = Modifier.size(28.dp)
-                        )
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(Color.White),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        IconButton(onClick = { navController.popBackStack() }) {
+                            Icon(
+                                imageVector = Icons.Default.Home,
+                                contentDescription = "Home",
+                                tint = DarkGreen,
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
                     }
 
-                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Spacer(modifier = Modifier.width(12.dp))
 
                     Text(
                         text = "Profile",
@@ -108,8 +164,7 @@ fun UserProfileScreen(username: String, navController: NavHostController) {
                         fontFamily = Poppins
                     )
                 }
-                
-                // Settings Button
+
                 IconButton(
                     onClick = { /* TODO: Navigate to settings */ },
                     modifier = Modifier
@@ -126,24 +181,20 @@ fun UserProfileScreen(username: String, navController: NavHostController) {
             }
         }
 
-        // Profile content
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
         ) {
-            // Profile Header
             item {
-                ProfileHeader(username, userLevel)
+                ProfileHeader(userViewModel)
                 Spacer(modifier = Modifier.height(24.dp))
             }
 
-            // User Info Section
             item {
-                ProfileInfoSection()
+                ProfileInfoSection(userViewModel)
                 Spacer(modifier = Modifier.height(24.dp))
             }
 
-            // Recent Achievements
             item {
                 ProfileRecentAchievements(navController, achievements)
                 Spacer(modifier = Modifier.height(24.dp))
@@ -153,9 +204,15 @@ fun UserProfileScreen(username: String, navController: NavHostController) {
 }
 
 
-// Profile Header
 @Composable
-fun ProfileHeader(username: String, userLevel: UserLevel) {
+fun ProfileHeader(userViewModel: UserViewModel) {
+
+    val loggedInUser by userViewModel.loggedInUser.collectAsState()
+
+
+    val xp = loggedInUser?.xp ?: 0
+    val levelInfo = computeLevel(xp)
+
     Column(
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -175,7 +232,6 @@ fun ProfileHeader(username: String, userLevel: UserLevel) {
                     .padding(top = 20.dp, bottom = 20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Profile Picture
                 Box(
                     contentAlignment = Alignment.Center
                 ) {
@@ -187,15 +243,25 @@ fun ProfileHeader(username: String, userLevel: UserLevel) {
                             .background(Color.White),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = "Profile",
-                            tint = DarkGreen,
-                            modifier = Modifier.size(45.dp)
-                        )
+                        if (loggedInUser?.image?.isNotEmpty() == true) {
+                            AsyncImage(
+                                model = loggedInUser!!.image,
+                                contentDescription = "Profile Picture",
+                                modifier = Modifier
+                                    .size(96.dp)
+                                    .clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = "Profile Picture",
+                                tint = Color.White,
+                                modifier = Modifier.size(48.dp)
+                            )
+                        }
                     }
-                    
-                    // Level Badge
+
                     Box(
                         modifier = Modifier
                             .size(32.dp)
@@ -207,7 +273,7 @@ fun ProfileHeader(username: String, userLevel: UserLevel) {
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "${userLevel.level}",
+                            text = "${levelInfo.level}",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
                             color = DarkGreen,
@@ -219,7 +285,7 @@ fun ProfileHeader(username: String, userLevel: UserLevel) {
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Text(
-                    text = "@$username",
+                    text = "${loggedInUser?.firstname} ${loggedInUser?.lastname}",
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White,
@@ -228,20 +294,19 @@ fun ProfileHeader(username: String, userLevel: UserLevel) {
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // About
                 Text(
-                    text = "Passionate musician with 8 years of experience.\nLove exploring different genres and techniques.",
+                    text = "${loggedInUser?.introduction}",
                     fontSize = 13.sp,
                     color = Color.White.copy(alpha = 0.9f),
                     fontFamily = Poppins,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    textAlign = TextAlign.Center,
                     lineHeight = 18.sp,
                     modifier = Modifier.padding(horizontal = 32.dp)
                 )
             }
         }
 
-        // Level Progress
+
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -255,14 +320,14 @@ fun ProfileHeader(username: String, userLevel: UserLevel) {
             ) {
                 Column {
                     Text(
-                        text = userLevel.title,
+                        text = levelInfo.title,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = DarkGreen,
                         fontFamily = Poppins
                     )
                     Text(
-                        text = "${userLevel.currentXP} / ${userLevel.xpToNextLevel} XP",
+                        text = "${levelInfo.currentXP} / ${levelInfo.xpToNextLevel} XP",
                         fontSize = 13.sp,
                         color = Color.Gray,
                         fontFamily = Poppins
@@ -270,7 +335,7 @@ fun ProfileHeader(username: String, userLevel: UserLevel) {
                 }
                 
                 Text(
-                    text = "Level ${userLevel.level}",
+                    text = "Level ${levelInfo.level}",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = DarkGreen,
@@ -280,9 +345,8 @@ fun ProfileHeader(username: String, userLevel: UserLevel) {
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Progress Bar
             LinearProgressIndicator(
-            progress = { userLevel.currentXP.toFloat() / userLevel.xpToNextLevel.toFloat() },
+            progress = { levelInfo.currentXP.toFloat() / levelInfo.xpToNextLevel.toFloat() },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(10.dp)
@@ -301,7 +365,7 @@ fun ProfileHeader(username: String, userLevel: UserLevel) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "${userLevel.xpToNextLevel - userLevel.currentXP} XP to Level ${userLevel.level + 1}",
+                    text = "${levelInfo.xpToNextLevel - levelInfo.currentXP} XP to Level ${levelInfo.level + 1}",
                     fontSize = 11.sp,
                     color = Color.Gray,
                     fontFamily = Poppins
@@ -318,15 +382,18 @@ fun ProfileHeader(username: String, userLevel: UserLevel) {
     }
 }
 
-// Profile Info Section
+
 @Composable
-fun ProfileInfoSection() {
+fun ProfileInfoSection(userViewModel: UserViewModel) {
+
+    val loggedInUser by userViewModel.loggedInUser.collectAsState()
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
     ) {
-        // Instruments
+
         Column(
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -352,19 +419,20 @@ fun ProfileInfoSection() {
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Instruments
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(listOf("🎹 Piano", "🎸 Guitar", "🎻 Violin", "🥁 Drums")) { instrument ->
+                val instrumentList = loggedInUser?.preferences ?: emptyList()
+
+                items(instrumentList) { instrument ->
                     ProfileInfoChip(text = instrument)
                 }
             }
+
         }
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // Interests/Genres Section
         Column(
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -390,11 +458,13 @@ fun ProfileInfoSection() {
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Interests chips
+
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(listOf("🎵 Classical", "🎶 Jazz", "🎸 Rock", "🎼 Blues", "🎹 Contemporary")) { interest ->
+                val interestList = loggedInUser?.interests ?: emptyList()
+
+                items(interestList) { interest ->
                     ProfileInfoChip(text = interest)
                 }
             }
@@ -407,7 +477,7 @@ fun ProfileInfoChip(text: String) {
     Surface(
         color = LightGreen.copy(alpha = 0.2f),
         shape = RoundedCornerShape(20.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, LightGreen.copy(alpha = 0.4f))
+        border = BorderStroke(1.dp, LightGreen.copy(alpha = 0.4f))
     ) {
         Text(
             text = text,
@@ -420,72 +490,7 @@ fun ProfileInfoChip(text: String) {
     }
 }
 
-@Composable
-fun ProfileStatsSection() {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp)
-        ) {
-            Text(
-                text = "Your Stats",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = DarkGreen,
-                fontFamily = Poppins
-            )
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceAround
-            ) {
-                ProfileStatItem("12", "Unlocked", Icons.Default.Lock)
-                ProfileStatItem("8", "In Progress", Icons.Default.HourglassEmpty)
-                ProfileStatItem("3450", "Total XP", Icons.Default.Star)
-            }
-        }
-    }
-}
-
-@Composable
-fun ProfileStatItem(value: String, label: String, icon: androidx.compose.ui.graphics.vector.ImageVector) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = label,
-            tint = DarkGreen,
-            modifier = Modifier.size(24.dp)
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = value,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
-            color = DarkGreen,
-            fontFamily = Poppins
-        )
-        Text(
-            text = label,
-            fontSize = 12.sp,
-            color = Color.Gray,
-            fontFamily = Poppins
-        )
-    }
-}
-
-// Profile Recent Achievements
 @Composable
 fun ProfileRecentAchievements(navController: NavHostController, allAchievements: List<Achievement>) {
     val recentAchievements = allAchievements.filter { it.isUnlocked }.take(6)
@@ -526,8 +531,7 @@ fun ProfileRecentAchievements(navController: NavHostController, allAchievements:
             }
             
             Spacer(modifier = Modifier.height(16.dp))
-            
-            // Achievements Scroll
+
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
@@ -585,7 +589,7 @@ fun ProfileAchievementBadge(emoji: String, title: String, unlockedDate: String, 
             fontFamily = Poppins,
             fontWeight = FontWeight.Medium,
             maxLines = 2,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
@@ -594,12 +598,11 @@ fun ProfileAchievementBadge(emoji: String, title: String, unlockedDate: String, 
             color = Color.Gray,
             fontFamily = Poppins,
             fontWeight = FontWeight.Normal,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            textAlign = TextAlign.Center
         )
     }
 }
 
-// Achievements Screen
 @Composable
 fun AchievementsScreen(navController: NavHostController) {
     val achievements = listOf(
@@ -634,7 +637,6 @@ fun AchievementsScreen(navController: NavHostController) {
             .background(WhiteBox)
             .padding(horizontal = 16.dp, vertical = 24.dp)
     ) {
-        // Home button
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -671,7 +673,7 @@ fun AchievementsScreen(navController: NavHostController) {
         LazyColumn(
             modifier = Modifier.fillMaxSize()
         ) {
-            // Header Stats
+
             item {
                 Card(
                     modifier = Modifier
@@ -704,7 +706,7 @@ fun AchievementsScreen(navController: NavHostController) {
                         
                         Spacer(modifier = Modifier.height(8.dp))
                         
-                        // Progress text
+
                         Text(
                             text = "$unlockedCount / $totalCount Unlocked",
                             fontSize = 24.sp,
@@ -724,7 +726,7 @@ fun AchievementsScreen(navController: NavHostController) {
                         
                         Spacer(modifier = Modifier.height(16.dp))
                         
-                        // Overall progress bar
+
                         LinearProgressIndicator(
                         progress = { progressPercentage / 100f },
                         modifier = Modifier
@@ -739,7 +741,7 @@ fun AchievementsScreen(navController: NavHostController) {
                         
                         Spacer(modifier = Modifier.height(16.dp))
                         
-                        // Mini stats row
+
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceEvenly
@@ -752,7 +754,7 @@ fun AchievementsScreen(navController: NavHostController) {
                 }
             }
 
-            // Category Filters
+
             item {
                 Column(
                     modifier = Modifier
@@ -783,7 +785,7 @@ fun AchievementsScreen(navController: NavHostController) {
                 }
             }
 
-            // Achievement Grid
+
             item {
                 Spacer(modifier = Modifier.height(8.dp))
             }
@@ -801,7 +803,7 @@ fun AchievementsScreen(navController: NavHostController) {
                             modifier = Modifier.weight(1f)
                         )
                     }
-                    // Fill empty space if odd number
+
                     if (rowAchievements.size == 1) {
                         Spacer(modifier = Modifier.weight(1f))
                     }
@@ -816,7 +818,6 @@ fun AchievementsScreen(navController: NavHostController) {
     }
 }
 
-// Achievement Card
 @Composable
 fun AchievementCard(achievement: Achievement, modifier: Modifier = Modifier) {
     val cardColor = if (achievement.isUnlocked) {
@@ -842,7 +843,7 @@ fun AchievementCard(achievement: Achievement, modifier: Modifier = Modifier) {
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Unlocked
+
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
@@ -872,7 +873,7 @@ fun AchievementCard(achievement: Achievement, modifier: Modifier = Modifier) {
                 color = if (achievement.isUnlocked) DarkGreen else Color.Gray,
                 fontFamily = Poppins,
                 maxLines = 2,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                textAlign = TextAlign.Center,
                 modifier = Modifier.height(36.dp)
             )
 
@@ -884,7 +885,7 @@ fun AchievementCard(achievement: Achievement, modifier: Modifier = Modifier) {
                 color = Color.Gray,
                 fontFamily = Poppins,
                 maxLines = 2,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                textAlign = TextAlign.Center
             )
 
             if (!achievement.isUnlocked && achievement.progress > 0) {
@@ -942,14 +943,14 @@ fun AchievementCard(achievement: Achievement, modifier: Modifier = Modifier) {
     }
 }
 
-// Achievement Filter
+
 @Composable
 fun AchievementFilterChip(label: String, emoji: String, isSelected: Boolean, onClick: () -> Unit) {
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(24.dp),
         color = if (isSelected) DarkGreen else Color.White,
-        border = androidx.compose.foundation.BorderStroke(
+        border = BorderStroke(
             width = 2.dp,
             color = if (isSelected) DarkGreen else Color.LightGray.copy(alpha = 0.3f)
         ),
@@ -976,7 +977,7 @@ fun AchievementFilterChip(label: String, emoji: String, isSelected: Boolean, onC
     }
 }
 
-// Achievement Stat
+
 @Composable
 fun AchievementMiniStat(emoji: String, value: String, label: String) {
     Column(
@@ -1003,7 +1004,7 @@ fun AchievementMiniStat(emoji: String, value: String, label: String) {
     }
 }
 
-// Achievement Category Emoji
+
 @Composable
 fun achievementCategoryEmoji(category: String): String {
     return when (category) {

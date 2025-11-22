@@ -1,5 +1,6 @@
-package com.itismob.s15.group7.practal
+package com.itismob.s15.group7.practal.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -17,9 +18,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.itismob.s15.group7.practal.DarkGreen
+import com.itismob.s15.group7.practal.LightGreen
+import com.itismob.s15.group7.practal.WhiteBox
 import com.itismob.s15.group7.practal.ui.theme.Poppins
 
 data class Club(
@@ -61,7 +66,7 @@ fun ClubsScreen(navController: NavHostController) {
             .fillMaxSize()
             .background(WhiteBox)
     ) {
-        // Header
+
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -85,7 +90,6 @@ fun ClubsScreen(navController: NavHostController) {
             )
         }
 
-        // Filter Categories
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp)
@@ -99,7 +103,6 @@ fun ClubsScreen(navController: NavHostController) {
             }
         }
 
-        // My Clubs Section
         val myClubs = clubs.filter { it.isMember }
         if (myClubs.isNotEmpty()) {
             Text(
@@ -123,7 +126,7 @@ fun ClubsScreen(navController: NavHostController) {
             Spacer(modifier = Modifier.height(16.dp))
         }
 
-        // Discover Clubs Section
+
         Text(
             text = "Discover Clubs",
             fontSize = 18.sp,
@@ -155,7 +158,7 @@ fun ClubFilterChip(label: String, isSelected: Boolean, onClick: () -> Unit) {
         onClick = onClick,
         shape = RoundedCornerShape(24.dp),
         color = if (isSelected) DarkGreen else Color.White,
-        border = androidx.compose.foundation.BorderStroke(
+        border = BorderStroke(
             width = 2.dp,
             color = if (isSelected) DarkGreen else Color.LightGray.copy(alpha = 0.3f)
         )
@@ -200,7 +203,7 @@ fun MyClubCard(club: Club) {
                 color = DarkGreen,
                 fontFamily = Poppins,
                 maxLines = 2,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                textAlign = TextAlign.Center
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
@@ -227,7 +230,7 @@ fun ClubCard(club: Club) {
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Club Icon
+
             Box(
                 modifier = Modifier
                     .size(60.dp)
@@ -243,7 +246,7 @@ fun ClubCard(club: Club) {
             
             Spacer(modifier = Modifier.width(16.dp))
             
-            // Club Info
+
             Column(
                 modifier = Modifier.weight(1f)
             ) {
@@ -298,7 +301,7 @@ fun ClubCard(club: Club) {
             
             Spacer(modifier = Modifier.width(12.dp))
             
-            // Join Button
+
             Button(
                 onClick = { /* TODO: Handle join/leave */ },
                 colors = ButtonDefaults.buttonColors(
@@ -309,7 +312,8 @@ fun ClubCard(club: Club) {
                 modifier = Modifier
                     .height(36.dp)
                     .then(
-                        if (club.isMember) Modifier.border(1.dp, DarkGreen, RoundedCornerShape(12.dp))
+                        if (club.isMember) Modifier.Companion.border(1.dp,
+                            DarkGreen, RoundedCornerShape(12.dp))
                         else Modifier
                     ),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp)

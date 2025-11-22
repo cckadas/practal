@@ -14,12 +14,36 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.itismob.s15.group7.practal.domain.controller.ChallengeViewModel
+import com.itismob.s15.group7.practal.domain.controller.PostViewModel
+import com.itismob.s15.group7.practal.domain.controller.UserViewModel
+import com.itismob.s15.group7.practal.ui.screens.AchievementsScreen
+import com.itismob.s15.group7.practal.ui.screens.ChallengeDetailScreen
+import com.itismob.s15.group7.practal.ui.screens.ChallengeScreen
+import com.itismob.s15.group7.practal.ui.screens.CompletedProfileScreen
+import com.itismob.s15.group7.practal.ui.screens.DashboardScreen
+import com.itismob.s15.group7.practal.ui.screens.GoalSkillInfoScreen
+import com.itismob.s15.group7.practal.ui.screens.IntroductionScreen
+import com.itismob.s15.group7.practal.ui.screens.LogPracticeSessionScreen
+import com.itismob.s15.group7.practal.ui.screens.LoginScreen
+import com.itismob.s15.group7.practal.ui.screens.MusicInfoScreen
+import com.itismob.s15.group7.practal.ui.screens.OtherDetailsScreen
+import com.itismob.s15.group7.practal.ui.screens.OtherProfileScreen
+import com.itismob.s15.group7.practal.ui.screens.PhotoUploadScreen
+import com.itismob.s15.group7.practal.ui.screens.SignUpScreen
+import com.itismob.s15.group7.practal.ui.screens.UserProfileScreen
+import com.itismob.s15.group7.practal.ui.screens.WelcomeProfileScreen
 import com.itismob.s15.group7.practal.ui.theme.Montserrat
 import com.itismob.s15.group7.practal.ui.theme.Poppins
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -31,39 +55,49 @@ class MainActivity : ComponentActivity() {
 }
 
 
+
+
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PractalApp() {
     val navController = rememberNavController()
+    val userViewModel: UserViewModel = viewModel()
+    val challengeViewModel: ChallengeViewModel = viewModel()
+    val postViewModel: PostViewModel = viewModel()
+    val email: String = ""
 
     NavHost(navController, startDestination = "landing") {
         composable("landing") { LandingScreen(navController) }
-        composable("login") { LoginScreen(navController) }
-        composable("signup") { SignUpScreen(navController) }
+        composable("login") { LoginScreen(navController, userViewModel) }
+        composable("signup") { SignUpScreen(navController, userViewModel) }
 
-        composable("welcome_profile") { WelcomeProfileScreen(navController, "username") }
-        composable("photo_upload") { PhotoUploadScreen(navController) }
-        composable("intro") { IntroductionScreen(navController) }
-        composable("music_info") { MusicInfoScreen(navController) }
-        composable("goal_skill_info") { GoalSkillInfoScreen(navController) }
-        composable("other_details") { OtherDetailsScreen(navController) }
-        composable("done") { CompletedProfileScreen(navController) }
+        composable("welcome_profile") { WelcomeProfileScreen(navController, userViewModel) }
+        composable("photo_upload") { PhotoUploadScreen(navController, userViewModel) }
+        composable("intro") { IntroductionScreen(navController, userViewModel) }
+        composable("music_info") { MusicInfoScreen(navController, userViewModel) }
+        composable("goal_skill_info") { GoalSkillInfoScreen(navController, userViewModel) }
+        composable("other_details") { OtherDetailsScreen(navController, userViewModel) }
+        composable("done") { CompletedProfileScreen(navController, userViewModel) }
 
-        composable("dashboard") { DashboardScreen(navController, "username") }
+        composable("dashboard") { DashboardScreen(navController, userViewModel, postViewModel) }
 
 
-        composable("challenges") { ChallengeScreen(navController) }
+        composable("challenges") { ChallengeScreen(navController, userViewModel, challengeViewModel) }
         composable("challenge_detail/{challenge_id}") { backStackEntry ->
-            val challengeId = backStackEntry.arguments?.getString("challenge_id")?.toIntOrNull() ?: 0
-            ChallengeDetailScreen(navController, challengeId)
+            val challengeId = backStackEntry.arguments?.getString("challenge_id") ?: ""
+            ChallengeDetailScreen(navController, challengeId, userViewModel, challengeViewModel)
         }
 
         composable("log_practice") { LogPracticeSessionScreen(navController) }
         composable("all_achievements") { AchievementsScreen(navController) }
-        composable("profile/{username}") { backStackEntry ->
-            val username = backStackEntry.arguments?.getString("username") ?: "username"
-            UserProfileScreen(username, navController)
+
+        composable("profile") { UserProfileScreen(navController, userViewModel) }
+        composable("other_profile/{email}") { backStackEntry ->
+            val email = backStackEntry.arguments?.getString("email") ?: ""
+            OtherProfileScreen(navController, userViewModel, email)
         }
+
     }
 }
 

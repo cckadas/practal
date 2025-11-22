@@ -1,4 +1,4 @@
-package com.itismob.s15.group7.practal
+package com.itismob.s15.group7.practal.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -16,17 +16,24 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import com.itismob.s15.group7.practal.DarkGreen
+import com.itismob.s15.group7.practal.LightGreen
+import com.itismob.s15.group7.practal.WhiteBox
+import com.itismob.s15.group7.practal.domain.controller.UserViewModel
 import com.itismob.s15.group7.practal.ui.theme.Poppins
 
 @Composable
-fun ProgressAnalyticsScreen(username: String, navController: NavHostController) {
+fun ProgressAnalyticsScreen(navController: NavHostController, userViewModel: UserViewModel){
     var selectedFilter by remember { mutableStateOf("Weekly") }
     val filters = listOf("Weekly", "Monthly", "Yearly")
+    val loggedInUser by userViewModel.loggedInUser.collectAsState()
 
     Column(
         modifier = Modifier
@@ -35,7 +42,6 @@ fun ProgressAnalyticsScreen(username: String, navController: NavHostController) 
             .verticalScroll(rememberScrollState())
             .padding(bottom = 92.dp)
     ) {
-        // Header
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -50,7 +56,7 @@ fun ProgressAnalyticsScreen(username: String, navController: NavHostController) 
             ) {
                 Column {
                     Text(
-                        text = "Hey $username! 👋",
+                        text = "Hey ${loggedInUser?.firstname}! 👋",
                         fontSize = 16.sp,
                         color = Color.White.copy(alpha = 0.8f),
                         fontFamily = Poppins
@@ -63,7 +69,7 @@ fun ProgressAnalyticsScreen(username: String, navController: NavHostController) 
                         fontFamily = Poppins
                     )
                 }
-                // Streak badge
+
                 Box(
                     modifier = Modifier
                         .size(60.dp)
@@ -79,7 +85,6 @@ fun ProgressAnalyticsScreen(username: String, navController: NavHostController) 
             }
         }
 
-        // Filter Tabs
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -107,14 +112,12 @@ fun ProgressAnalyticsScreen(username: String, navController: NavHostController) 
             }
         }
 
-        // Stats Grid 
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Total Practice Time
             StatsCard(
                 icon = Icons.Default.AccessTime,
                 title = "Practice Time",
@@ -124,7 +127,6 @@ fun ProgressAnalyticsScreen(username: String, navController: NavHostController) 
                 modifier = Modifier.weight(1f)
             )
 
-            // Practice Sessions
             StatsCard(
                 icon = Icons.Default.MusicNote,
                 title = "Sessions",
@@ -137,7 +139,6 @@ fun ProgressAnalyticsScreen(username: String, navController: NavHostController) 
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Streak Card
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -188,7 +189,6 @@ fun ProgressAnalyticsScreen(username: String, navController: NavHostController) 
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Practice Frequency Section
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -217,7 +217,6 @@ fun ProgressAnalyticsScreen(username: String, navController: NavHostController) 
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Recent Achievements Section
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -260,7 +259,6 @@ fun ProgressAnalyticsScreen(username: String, navController: NavHostController) 
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Instrument Breakdown
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -294,7 +292,7 @@ fun ProgressAnalyticsScreen(username: String, navController: NavHostController) 
 
 @Composable
 fun StatsCard(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     title: String,
     value: String,
     subtitle: String,
@@ -483,7 +481,6 @@ fun InstrumentBreakdownItem(instrument: String, percentage: Int, color: Color) {
     }
 }
 
-// Helper
 fun getStatValue(filter: String, type: String): String {
     return when (type) {
         "time" -> when (filter) {

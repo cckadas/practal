@@ -1,57 +1,56 @@
-package com.itismob.s15.group7.practal
+package com.itismob.s15.group7.practal.ui.screens
 
+import android.net.Uri
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import coil.compose.AsyncImage
+import com.itismob.s15.group7.practal.DarkGreen
+import com.itismob.s15.group7.practal.WhiteBox
+import com.itismob.s15.group7.practal.domain.controller.UserViewModel
 import com.itismob.s15.group7.practal.ui.theme.Poppins
 
 val Gold = Color(0xFFFFD700)
 val Silver = Color(0xFFC0C0C0)
 val Bronze = Color(0xFFCD7F32)
 
+data class LeaderboardEntry(val username: String, val score: Int, val image: String)
 
 @Composable
-fun LeaderboardScreen(navController: NavHostController) {
-    val leaderboard = listOf(
-        LeaderboardEntry("beathoven", 980),
-        LeaderboardEntry("mozart123", 920),
-        LeaderboardEntry("iamsteph", 900),
-        LeaderboardEntry("useruser", 850),
-        LeaderboardEntry("ellie", 800),
-        LeaderboardEntry("real_sophia", 760),
-        LeaderboardEntry("musiclover", 700)
-    )
+fun LeaderboardScreen(navController: NavHostController, viewModel: UserViewModel) {
 
-    val userRank = 24
-    val userScore = 150
+    val userList by viewModel.userList.collectAsState()
+    val loggedInUser by viewModel.loggedInUser.collectAsState()
+
+    val (rankedUsers, userRank) = if (loggedInUser != null) {
+        viewModel.getRankedUsers(loggedInUser!!.email)
+    } else {
+        Pair(emptyList(), null)
+    }
+
+    val userScore = loggedInUser?.points ?: 0
 
     Column(
         modifier = Modifier
@@ -83,6 +82,7 @@ fun LeaderboardScreen(navController: NavHostController) {
             )
         }
 
+        Spacer(modifier = Modifier.height(8.dp))
 
         Surface(
             modifier = Modifier
@@ -101,7 +101,7 @@ fun LeaderboardScreen(navController: NavHostController) {
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
-                    text = "Your Rank: #$userRank",
+                    text = "Your Rank: #${userRank ?: "-"}",
                     fontWeight = FontWeight.Bold,
                     fontSize = 22.sp,
                     color = DarkGreen,
@@ -118,6 +118,7 @@ fun LeaderboardScreen(navController: NavHostController) {
 
         Spacer(modifier = Modifier.height(24.dp))
 
+
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -125,9 +126,9 @@ fun LeaderboardScreen(navController: NavHostController) {
                 start = 16.dp,
                 end = 16.dp,
                 bottom = 92.dp
-            ),
+            )
         ) {
-            itemsIndexed(leaderboard) { index, entry ->
+            itemsIndexed(rankedUsers) { index, entry ->
                 val rank = index + 1
                 val cardColor = when (rank) {
                     1 -> Gold.copy(alpha = 0.5f)
@@ -135,12 +136,16 @@ fun LeaderboardScreen(navController: NavHostController) {
                     3 -> Bronze.copy(alpha = 0.5f)
                     else -> WhiteBox
                 }
-                LeaderboardCard(entry, rank, cardColor)
+
+                LeaderboardCard(
+                    entry = LeaderboardEntry("${entry.firstname} ${entry.lastname}", entry.points, entry.image),
+                    rank = rank,
+                    bgColor = cardColor
+                )
             }
         }
     }
 }
-
 
 @Composable
 fun LeaderboardCard(entry: LeaderboardEntry, rank: Int, bgColor: Color) {
@@ -159,17 +164,28 @@ fun LeaderboardCard(entry: LeaderboardEntry, rank: Int, bgColor: Color) {
         ) {
             Box(
                 modifier = Modifier
-                    .size(40.dp)
+                    .size(48.dp)
                     .clip(CircleShape)
                     .background(if (rank <= 3) DarkGreen else CardAccent),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = "$rank",
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    fontSize = 16.sp
-                )
+                if (entry.image.isNotEmpty()) {
+                    AsyncImage(
+                        model = entry.image,
+                        contentDescription = "Profile Picture",
+                        modifier = Modifier
+                            .size(96.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = "Profile Picture",
+                        tint = Color.White,
+                        modifier = Modifier.size(36.dp)
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.width(16.dp))
@@ -184,18 +200,26 @@ fun LeaderboardCard(entry: LeaderboardEntry, rank: Int, bgColor: Color) {
                 )
                 Text(
                     text = "${entry.score} pts",
-                    fontSize = 13.sp,
+                    fontSize = 16.sp,
                     color = Color.Gray,
                     fontFamily = Poppins
                 )
             }
 
-            Icon(
-                imageVector = Icons.Default.EmojiEvents,
-                contentDescription = "Trophy",
-                tint = if (rank <= 3) DarkGreen else Color.Gray,
-                modifier = Modifier.size(26.dp)
-            )
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(color = Color.White),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "#$rank",
+                    fontWeight = FontWeight.ExtraBold,
+                    color = CardAccent,
+                    fontSize = 20.sp
+                )
+            }
         }
     }
 }
