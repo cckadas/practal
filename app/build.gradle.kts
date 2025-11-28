@@ -44,6 +44,15 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 
+    // Firebase
+    implementation(platform("com.google.firebase:firebase-bom:34.6.0"))
+    // auth
+    implementation("com.google.firebase:firebase-auth")
+    // firestore db
+    implementation("com.google.firebase:firebase-firestore")
+    // analytics
+    implementation("com.google.firebase:firebase-analytics")
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
