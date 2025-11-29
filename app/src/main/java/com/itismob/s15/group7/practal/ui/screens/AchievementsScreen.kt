@@ -57,50 +57,35 @@ fun AchievementsScreen(
     val loggedInUser by userViewModel.loggedInUser.collectAsState()
     val allAchievements by achievementViewModel.achievements.collectAsState()
     val userAchievements by achievementViewModel.userAchievements.collectAsState()
-    
     val userId = loggedInUser?.id ?: ""
     
-    LaunchedEffect(userId) {
+    // Load and check achievements on screen open
+    LaunchedEffect(Unit) {
         if (userId.isNotEmpty()) {
+            loggedInUser?.let { achievementViewModel.checkAndUnlockAchievements(it) }
             achievementViewModel.loadUserAchievements(userId)
         }
     }
     
-    val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
-    
-    val achievements = allAchievements.map { achievement ->
-        val userAchievement = userAchievements.find { it.achievementId == achievement.id }
-        val isUnlocked = userAchievement?.completed ?: false
-        val progress = userAchievement?.progress ?: 0
-        val unlockedDate = if (isUnlocked && userAchievement != null) {
-            dateFormat.format(userAchievement.unlockedDate.toDate())
-        } else null
-        
-        AchievementUI(
-            id = achievement.id,
-            title = achievement.title,
-            description = achievement.description,
-            icon = achievement.badgeIcon,
-            isUnlocked = isUnlocked,
-            progress = progress,
-            category = mapCategoryToUI(achievement.category),
-            unlockedDate = unlockedDate,
-            xpReward = achievement.xpReward
-        )
+    LaunchedEffect(userId) {
+        if (userId.isNotEmpty()) achievementViewModel.loadUserAchievements(userId)
     }
     
+    val achievements = mapToAchievementUI(allAchievements, userAchievements)
     var selectedCategory by remember { mutableStateOf("All") }
-    val categories = listOf("All", "Practice", "Challenge", "Social", "Special")
     
-    val filteredAchievements = if (selectedCategory == "All") {
-        achievements
-    } else {
-        achievements.filter { it.category == selectedCategory }
-    }
+    val filteredAchievements = if (selectedCategory == "All") achievements 
+        else achievements.filter { it.category == selectedCategory }
     
     val unlockedCount = achievements.count { it.isUnlocked }
-    val totalCount = achievements.size
-    val progressPercentage = (unlockedCount.toFloat() / totalCount * 100).toInt()
+    val progressPercentage = if (achievements.isNotEmpty()) (unlockedCount * 100 / achievements.size) else 0
+    
+    // Debug logging
+    LaunchedEffect(allAchievements.size, userAchievements.size, unlockedCount) {
+        android.util.Log.d("AchievementsScreen", "Achievements: ${allAchievements.size}, User: ${userAchievements.size}, Unlocked: $unlockedCount")
+        userAchievements.forEach { android.util.Log.d("AchievementsScreen", "  - ${it.achievementId}: completed=${it.completed}, progress=${it.progress}") }
+        achievements.filter { it.isUnlocked }.forEach { android.util.Log.d("AchievementsScreen", "  - Unlocked: ${it.title}") }
+    }
 
     Column(
         modifier = Modifier
@@ -170,7 +155,7 @@ fun AchievementsScreen(
                         Text("🏆", fontSize = 48.sp)
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            "$unlockedCount / $totalCount Unlocked",
+                            "$unlockedCount / ${achievements.size} Unlocked",
                             fontSize = 24.sp, fontWeight = FontWeight.Bold,
                             color = DarkGreen, fontFamily = Poppins
                         )
@@ -193,8 +178,8 @@ fun AchievementsScreen(
                             horizontalArrangement = Arrangement.SpaceEvenly
                         ) {
                             AchievementMiniStat("🔓", unlockedCount.toString(), "Unlocked")
-                            AchievementMiniStat("⏳", (totalCount - unlockedCount).toString(), "Locked")
-                            AchievementMiniStat("⭐", "${unlockedCount * 10}", "XP Earned")
+                            AchievementMiniStat("🔒", (achievements.size - unlockedCount).toString(), "Locked")
+                            AchievementMiniStat("⭐", achievements.filter { it.isUnlocked }.sumOf { it.xpReward }.toString(), "XP Earned")
                         }
                     }
                 }
@@ -211,10 +196,10 @@ fun AchievementsScreen(
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(categories) { category ->
+                        items(CATEGORIES) { category ->
                             AchievementFilterChip(
                                 label = category,
-                                emoji = achievementCategoryEmoji(category),
+                                emoji = getCategoryEmoji(category),
                                 isSelected = selectedCategory == category,
                                 onClick = { selectedCategory = category }
                             )
@@ -225,19 +210,49 @@ fun AchievementsScreen(
 
             item { Spacer(modifier = Modifier.height(8.dp)) }
             
-            items(filteredAchievements.chunked(2)) { rowAchievements ->
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    rowAchievements.forEach { achievement ->
-                        AchievementCard(achievement = achievement, modifier = Modifier.weight(1f))
-                    }
-                    if (rowAchievements.size == 1) {
-                        Spacer(modifier = Modifier.weight(1f))
+            if (filteredAchievements.isEmpty()) {
+                item {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        shape = RoundedCornerShape(20.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(32.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text("📋", fontSize = 48.sp)
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = if (achievements.isEmpty()) "Loading achievements..." else "No achievements in this category",
+                                fontSize = 16.sp,
+                                color = Color.Gray,
+                                fontFamily = Poppins,
+                                textAlign = TextAlign.Center
+                            )
+                        }
                     }
                 }
-                Spacer(modifier = Modifier.height(12.dp))
+            } else {
+                items(filteredAchievements.chunked(2)) { rowAchievements ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        rowAchievements.forEach { achievement ->
+                            AchievementCard(achievement = achievement, modifier = Modifier.weight(1f))
+                        }
+                        if (rowAchievements.size == 1) {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
             }
             
             item { Spacer(modifier = Modifier.height(24.dp)) }
@@ -245,14 +260,34 @@ fun AchievementsScreen(
     }
 }
 
-fun mapCategoryToUI(category: String): String {
-    return when (category) {
-        "practice" -> "Practice"
-        "challenge" -> "Challenge"
-        "social" -> "Social"
-        "special" -> "Special"
-        else -> "Practice"
+private fun mapToAchievementUI(
+    allAchievements: List<Achievement>,
+    userAchievements: List<com.itismob.s15.group7.practal.domain.model.UserAchievement>
+): List<AchievementUI> {
+    val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+    return allAchievements.map { achievement ->
+        val userAchievement = userAchievements.find { it.achievementId == achievement.id }
+        val isUnlocked = userAchievement?.completed ?: false
+        AchievementUI(
+            id = achievement.id,
+            title = achievement.title,
+            description = achievement.description,
+            icon = achievement.badgeIcon,
+            isUnlocked = isUnlocked,
+            progress = userAchievement?.progress ?: 0,
+            category = mapCategory(achievement.category),
+            unlockedDate = if (isUnlocked) userAchievement?.unlockedDate?.toDate()?.let { dateFormat.format(it) } else null,
+            xpReward = achievement.xpReward
+        )
     }
+}
+
+private fun mapCategory(category: String): String = when (category) {
+    "practice" -> "Practice"
+    "challenge" -> "Challenge"
+    "social" -> "Social"
+    "special" -> "Special"
+    else -> "Practice"
 }
 
 @Composable
@@ -412,24 +447,22 @@ fun ProfileAchievementBadge(emoji: String, title: String, unlockedDate: String, 
 }
 
 @Composable
-fun achievementCategoryColor(category: String): Color {
-    return when (category) {
-        "Practice" -> DarkGreen
-        "Challenge" -> Color(0xFFFFD700)
-        "Social" -> Color(0xFF4CAF50)
-        "Special" -> Color(0xFFFF6B9D)
-        else -> DarkGreen
-    }
+fun achievementCategoryColor(category: String): Color = when (category) {
+    "Practice" -> DarkGreen
+    "Challenge" -> Color(0xFFFFD700)
+    "Social" -> Color(0xFF4CAF50)
+    "Special" -> Color(0xFFFF6B9D)
+    else -> DarkGreen
 }
 
-@Composable
-fun achievementCategoryEmoji(category: String): String {
-    return when (category) {
-        "All" -> "🎯"
-        "Practice" -> "🎵"
-        "Challenge" -> "🏆"
-        "Social" -> "⭐"
-        "Special" -> "✨"
-        else -> "🎯"
-    }
+private fun getCategoryEmoji(category: String): String = when (category) {
+    "All" -> "🎯"
+    "Practice" -> "🎵"
+    "Challenge" -> "🏆"
+    "Social" -> "⭐"
+    "Special" -> "✨"
+    else -> "🎯"
 }
+
+// constants
+private val CATEGORIES = listOf("All", "Practice", "Challenge", "Social", "Special")

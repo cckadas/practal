@@ -67,6 +67,7 @@ fun PractalApp() {
     val challengeViewModel: ChallengeViewModel = viewModel()
     val postViewModel: PostViewModel = viewModel()
     val practiceSessionViewModel: PracticeSessionViewModel = viewModel { PracticeSessionViewModel(userViewModel) }
+    val achievementViewModel: com.itismob.s15.group7.practal.domain.controller.AchievementViewModel = viewModel()
     val email: String = ""
 
     NavHost(navController, startDestination = "landing") {
@@ -97,13 +98,13 @@ fun PractalApp() {
             ChallengeDetailScreen(navController, challengeId, userViewModel, challengeViewModel)
         }
 
-        composable("log_practice") { LogPracticeSessionScreen(navController, practiceSessionViewModel, userViewModel) }
-        composable("all_achievements") { AchievementsScreen(navController) }
+        composable("log_practice") { LogPracticeSessionScreen(navController, practiceSessionViewModel, userViewModel, achievementViewModel) }
+        composable("all_achievements") { AchievementsScreen(navController, userViewModel, achievementViewModel) }
 
-        composable("profile") { UserProfileScreen(navController, userViewModel) }
+        composable("profile") { UserProfileScreen(navController, userViewModel, achievementViewModel) }
         composable("other_profile/{email}") { backStackEntry ->
             val email = backStackEntry.arguments?.getString("email") ?: ""
-            OtherProfileScreen(navController, userViewModel, email)
+            OtherProfileScreen(navController, userViewModel, email, achievementViewModel)
         }
 
     }

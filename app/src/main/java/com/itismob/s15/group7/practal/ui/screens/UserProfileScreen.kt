@@ -98,6 +98,18 @@ fun UserProfileScreen(
     
     val userId = loggedInUser?.id ?: ""
     
+    // reload achievements every time screen is opened
+    LaunchedEffect(Unit) {
+        android.util.Log.d("UserProfileScreen", "Screen opened - userId: $userId")
+        if (userId.isNotEmpty()) {
+            loggedInUser?.let { user ->
+                android.util.Log.d("UserProfileScreen", "Checking achievements for user: ${user.email}")
+                achievementViewModel.checkAndUnlockAchievements(user)
+            }
+            achievementViewModel.loadUserAchievements(userId)
+        }
+    }
+    
     LaunchedEffect(userId) {
         if (userId.isNotEmpty()) {
             achievementViewModel.loadUserAchievements(userId)
@@ -110,8 +122,8 @@ fun UserProfileScreen(
         val userAchievement = userAchievements.find { it.achievementId == achievement.id }
         val isUnlocked = userAchievement?.completed ?: false
         val progress = userAchievement?.progress ?: 0
-        val unlockedDate = if (isUnlocked && userAchievement != null) {
-            dateFormat.format(userAchievement.unlockedDate.toDate())
+        val unlockedDate = if (isUnlocked) {
+            userAchievement?.unlockedDate?.toDate()?.let { dateFormat.format(it) }
         } else null
         
         AchievementUI(
@@ -132,6 +144,21 @@ fun UserProfileScreen(
             unlockedDate = unlockedDate,
             xpReward = achievement.xpReward
         )
+    }
+    
+    val unlockedCount = achievements.count { it.isUnlocked }
+    
+    LaunchedEffect(allAchievements.size, userAchievements.size, unlockedCount) {
+        android.util.Log.d("UserProfileScreen", "Total achievements: ${allAchievements.size}, User achievements: ${userAchievements.size}")
+        android.util.Log.d("UserProfileScreen", "Mapped achievements: ${achievements.size}, Unlocked: $unlockedCount")
+        android.util.Log.d("UserProfileScreen", "UserAchievements details:")
+        userAchievements.forEach { ua ->
+            android.util.Log.d("UserProfileScreen", "  - achievementId: ${ua.achievementId}, completed: ${ua.completed}, progress: ${ua.progress}")
+        }
+        android.util.Log.d("UserProfileScreen", "Achievements mapped:")
+        achievements.filter { it.isUnlocked }.forEach { a ->
+            android.util.Log.d("UserProfileScreen", "  - Unlocked: ${a.title} (${a.id})")
+        }
     }
 
     Column(
