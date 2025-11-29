@@ -57,7 +57,7 @@ data class AchievementUI(
 
 **Achievement Categories:**
 1. **Practice Hours** - based on `totalPracticeHours`
-2. **Streaks** - based on `currentStreak`
+2. **Streaks** - based on `longestStreak`
 3. **Challenges** - based on `challenges.size`
 4. **Community** - based on `followers.size` and `following.size`
 5. **Special** - time-based achievements (night owl, early bird)
@@ -77,7 +77,7 @@ tracks: `User.totalPracticeHours`
 | Practice Legend | `practice_1000` | 👑 | 1000 hours | Practice for 1000 hours | 2000 |
 
 ### Streaks
-tracks: `User.currentStreak`
+tracks: `User.longestStreak`
 
 | Achievement | ID | Icon | Requirement | Description | XP Reward |
 |------------|-----|------|-------------|-------------|-----------|
@@ -122,7 +122,7 @@ tracks: `User.practiceSessions.endTime`
 | Achievement | ID | Icon | Requirement | Description | XP Reward |
 |------------|-----|------|-------------|-------------|-----------|
 | Night Owl | `night_owl` | 🦉 | 10 sessions | Practice after midnight 10 times | 100 |
-| Early Bird | `early_bird` | 🌅 | 10 sessions | Practice before 6 AM 10 times | 100 |
+| Early Bird | `early_bird` | 🌅 | 10 sessions | Practice at 4-6 AM 10 times | 100 |
 
 ## Integrations
 

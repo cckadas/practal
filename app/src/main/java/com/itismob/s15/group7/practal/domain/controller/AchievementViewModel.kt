@@ -95,7 +95,7 @@ class AchievementViewModel : ViewModel() {
     }
     
     private suspend fun checkStreakAchievements(user: User) {
-        val streak = user.currentStreak
+        val streak = user.longestStreak
         val milestones = listOf(
             "streak_7" to 7,
             "streak_30" to 30,
