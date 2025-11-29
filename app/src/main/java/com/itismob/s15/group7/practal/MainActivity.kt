@@ -44,9 +44,6 @@ import com.itismob.s15.group7.practal.ui.screens.UserProfileScreen
 import com.itismob.s15.group7.practal.ui.screens.WelcomeProfileScreen
 import com.itismob.s15.group7.practal.ui.theme.Montserrat
 import com.itismob.s15.group7.practal.ui.theme.Poppins
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-
 
 
 class MainActivity : ComponentActivity() {
@@ -85,7 +82,6 @@ fun PractalApp() {
         composable("other_details") { OtherDetailsScreen(navController, userViewModel) }
         composable("done") { CompletedProfileScreen(navController, userViewModel) }
 
-        composable("dashboard") { DashboardScreen(navController, userViewModel, postViewModel) }
         composable("dashboard") { DashboardScreen(navController, userViewModel, postViewModel, practiceSessionViewModel) }
 
         composable("analytics") { ProgressAnalyticsScreen(navController, userViewModel, practiceSessionViewModel) }
@@ -101,7 +97,6 @@ fun PractalApp() {
             ChallengeDetailScreen(navController, challengeId, userViewModel, challengeViewModel)
         }
 
-        composable("log_practice") { LogPracticeSessionScreen(navController) }
         composable("log_practice") { LogPracticeSessionScreen(navController, practiceSessionViewModel, userViewModel) }
         composable("all_achievements") { AchievementsScreen(navController) }
 
