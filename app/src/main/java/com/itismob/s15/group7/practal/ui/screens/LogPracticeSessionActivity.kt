@@ -1,512 +1,453 @@
 package com.itismob.s15.group7.practal.ui.screens
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import android.widget.Toast
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.*
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.itismob.s15.group7.practal.DarkGreen
-import com.itismob.s15.group7.practal.LightGreen
-import com.itismob.s15.group7.practal.WhiteBox
+import com.itismob.s15.group7.practal.*
+import com.itismob.s15.group7.practal.domain.controller.*
 import com.itismob.s15.group7.practal.ui.theme.Poppins
+import kotlinx.coroutines.*
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Size
+
+// Constants
+private val INSTRUMENTS = listOf(
+    "🎹 Piano", "🎸 Guitar", "🎻 Violin", "🎻 Cello", "🪈 Flute",
+    "🎷 Clarinet", "🎷 Saxophone", "🎺 Trumpet", "🥁 Drums", "🎸 Bass",
+    "🎤 Voice", "🎹 Keyboard", "🪕 Banjo", "🎺 Trombone", "Other"
+)
+
+private val PRACTICE_TYPES = listOf(
+    "Scales & Technique", "Repertoire", "Sight Reading", "Improvisation",
+    "Warm-up", "Etudes", "Theory", "Ear Training", "Performance Prep"
+)
+
+private val DIFFICULTIES = listOf("Beginner", "Intermediate", "Advanced", "Expert")
 
 @Composable
-fun LogPracticeSessionScreen(navController: NavHostController) {
+fun LogPracticeSessionScreen(
+    navController: NavHostController,
+    practiceSessionViewModel: PracticeSessionViewModel,
+    userViewModel: UserViewModel,
+    achievementViewModel: com.itismob.s15.group7.practal.domain.controller.AchievementViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+) {
+    var currentStep by remember { mutableIntStateOf(1) }
     var instrument by remember { mutableStateOf("") }
+    var practiceType by remember { mutableStateOf("") }
     var practiceFocus by remember { mutableStateOf("") }
-    var startTime by remember { mutableStateOf("") }
-    var endTime by remember { mutableStateOf("") }
+    var difficulty by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
-    var showInstrumentDropdown by remember { mutableStateOf(false) }
     var showSuccessDialog by remember { mutableStateOf(false) }
-
-    val instruments = listOf(
-        "🎹 Piano", "🎸 Guitar", "🎻 Violin", "🎻 Cello", "🪈 Flute", 
-        "🎷 Clarinet", "🎷 Saxophone", "🎺 Trumpet", "🥁 Drums", "🎸 Bass", "🎤 Voice"
-    )
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(WhiteBox)
-            .height(64.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    Brush.horizontalGradient(
-                        colors = listOf(DarkGreen, CardAccent)
-                    )
+    var earnedXP by remember { mutableIntStateOf(0) }
+    var sessionDurationSeconds by remember { mutableIntStateOf(0) }
+    
+    val currentSession by practiceSessionViewModel.currentSession.collectAsState()
+    val loggedInUser by userViewModel.loggedInUser.collectAsState()
+    
+    when (currentStep) {
+        1 -> Step1_SessionDetails(
+            instrument, practiceType, practiceFocus,
+            { instrument = it }, { practiceType = it }, { practiceFocus = it },
+            onNext = {
+                practiceSessionViewModel.startPracticeSession(
+                    instrument.replace(Regex("[🎹🎸🎻🪈🎷🎺🥁🎤🪕]"), "").trim(),
+                    practiceType, practiceFocus
                 )
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 32.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = { navController.popBackStack() }) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
-                        tint = Color.White,
-                        modifier = Modifier.size(28.dp)
-                    )
+                currentStep = 2
+            },
+            onBack = { navController.popBackStack() }
+        )
+        2 -> Step2_LiveTimer(
+            practiceSessionViewModel,
+            onEnd = { currentStep = 3 },
+            onBack = { currentStep = 1 }
+        )
+        3 -> Step3_CompleteSession(
+            difficulty, notes,
+            { difficulty = it }, { notes = it },
+            practiceSessionViewModel,
+            onComplete = {
+                currentSession?.let { session ->
+                    val endTime = com.google.firebase.Timestamp.now()
+                    sessionDurationSeconds = (endTime.seconds - session.startTime.seconds).toInt()
+                    val durationMinutes = sessionDurationSeconds / 60
+                    val multiplier = when (difficulty.lowercase()) {
+                        "beginner" -> 1.0
+                        "intermediate" -> 1.5
+                        "advanced" -> 2.0
+                        "expert" -> 2.5
+                        else -> 1.0
+                    }
+                    earnedXP = (durationMinutes * multiplier).toInt()
                 }
-
-                Spacer(modifier = Modifier.width(8.dp))
-
-                Column {
-                    Text(
-                        text = "Log Practice",
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                        fontFamily = Poppins
-                    )
-                    Text(
-                        text = "Track your progress and build streaks!",
-                        fontSize = 13.sp,
-                        color = Color.White.copy(alpha = 0.9f),
-                        fontFamily = Poppins
-                    )
+                
+                practiceSessionViewModel.endPracticeSession(notes, difficulty)
+                GlobalScope.launch {
+                    delay(1500)
+                    userViewModel.getUserList()
+                    
+                    // Check and unlock achievements after session
+                    loggedInUser?.let { user ->
+                        achievementViewModel.checkAndUnlockAchievements(user)
+                    }
+                    
+                    showSuccessDialog = true
                 }
+            },
+            onBack = { currentStep = 2 }
+        )
+    }
+    
+    if (showSuccessDialog) {
+        SessionCompleteDialog(
+            earnedXP = earnedXP,
+            durationSeconds = sessionDurationSeconds,
+            currentLevel = loggedInUser?.level ?: 1,
+            totalXP = loggedInUser?.xp ?: 0,
+            onDismiss = {
+                showSuccessDialog = false
+                navController.popBackStack()
             }
-        }
+        )
+    }
+}
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
-        ) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.MusicNote,
-                            contentDescription = null,
-                            tint = DarkGreen,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "What did you practice?",
-                            fontFamily = Poppins,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 16.sp,
-                            color = DarkGreen
-                        )
-                    }
-                    
-                    Spacer(modifier = Modifier.height(12.dp))
-                    
-                    Box {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { showInstrumentDropdown = true }
-                        ) {
-                            OutlinedTextField(
-                                value = instrument,
-                                onValueChange = { },
-                                readOnly = true,
-                                enabled = false,
-                                modifier = Modifier.fillMaxWidth(),
-                                trailingIcon = {
-                                    Icon(
-                                        imageVector = Icons.Default.ArrowDropDown,
-                                        contentDescription = "Select instrument",
-                                        tint = DarkGreen
-                                    )
-                                },
-                                placeholder = { Text("Choose your instrument", fontFamily = Poppins) },
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = DarkGreen,
-                                    unfocusedBorderColor = Color.LightGray,
-                                    disabledBorderColor = Color.LightGray,
-                                    disabledTextColor = Color.Black,
-                                    disabledPlaceholderColor = Color.Gray
-                                ),
-                                shape = RoundedCornerShape(12.dp)
-                            )
-                        }
-                        
-                        DropdownMenu(
-                            expanded = showInstrumentDropdown,
-                            onDismissRequest = { showInstrumentDropdown = false },
-                            modifier = Modifier.fillMaxWidth(0.9f)
-                        ) {
-                            instruments.forEach { inst ->
-                                DropdownMenuItem(
-                                    text = { Text(inst, fontFamily = Poppins) },
-                                    onClick = {
-                                        instrument = inst
-                                        showInstrumentDropdown = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-                    
-                    Spacer(modifier = Modifier.height(12.dp))
-                    
-                    OutlinedTextField(
-                        value = practiceFocus,
-                        onValueChange = { practiceFocus = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = { 
-                            Text("What did you work on? (e.g., scales, Bach sonata)", fontFamily = Poppins) 
-                        },
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = DarkGreen,
-                            unfocusedBorderColor = Color.LightGray
-                        ),
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                }
+@Composable
+private fun SessionCompleteDialog(
+    earnedXP: Int,
+    durationSeconds: Int,
+    currentLevel: Int,
+    totalXP: Int,
+    onDismiss: () -> Unit
+) {
+    val xpForNextLevel = 100 + (currentLevel - 1) * 50
+    val xpForCurrentLevel = (1 until currentLevel).sumOf { 100 + (it - 1) * 50 }
+    val xpInCurrentLevel = totalXP - xpForCurrentLevel
+    val progress = (xpInCurrentLevel.toFloat() / xpForNextLevel).coerceIn(0f, 1f)
+    
+    val animatedProgress = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        animatedProgress.animateTo(progress, tween(1500, easing = FastOutSlowInEasing))
+    }
+    
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("🎉", fontSize = 48.sp)
+                Spacer(Modifier.height(8.dp))
+                Text("Session Complete!", fontFamily = Poppins, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
             }
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Timer,
-                            contentDescription = null,
-                            tint = DarkGreen,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "How long did you practice?",
-                            fontFamily = Poppins,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 16.sp,
-                            color = DarkGreen
-                        )
-                    }
-                    
-                    Spacer(modifier = Modifier.height(12.dp))
-                    
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Started at",
-                                fontFamily = Poppins,
-                                fontSize = 12.sp,
-                                color = Color.Gray,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            OutlinedTextField(
-                                value = startTime,
-                                onValueChange = { startTime = it },
-                                modifier = Modifier.fillMaxWidth(),
-                                placeholder = { Text("HH:MM", fontFamily = Poppins, fontSize = 14.sp) },
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = DarkGreen,
-                                    unfocusedBorderColor = Color.LightGray
-                                ),
-                                shape = RoundedCornerShape(12.dp)
-                            )
-                        }
-
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Ended at",
-                                fontFamily = Poppins,
-                                fontSize = 12.sp,
-                                color = Color.Gray,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            OutlinedTextField(
-                                value = endTime,
-                                onValueChange = { endTime = it },
-                                modifier = Modifier.fillMaxWidth(),
-                                placeholder = { Text("HH:MM", fontFamily = Poppins, fontSize = 14.sp) },
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = DarkGreen,
-                                    unfocusedBorderColor = Color.LightGray
-                                ),
-                                shape = RoundedCornerShape(12.dp)
-                            )
-                        }
-                    }
-
-                    if (startTime.isNotEmpty() && endTime.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Surface(
-                            modifier = Modifier.fillMaxWidth(),
-                            color = LightGreen.copy(alpha = 0.3f),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .padding(16.dp)
-                                    .fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "Total Time:",
-                                    fontFamily = Poppins,
-                                    fontWeight = FontWeight.Medium,
-                                    color = DarkGreen,
-                                    fontSize = 14.sp
-                                )
-                                Text(
-                                    text = "⏱️ ${calculateDuration(startTime, endTime)}",
-                                    fontFamily = Poppins,
-                                    fontWeight = FontWeight.Bold,
-                                    color = DarkGreen,
-                                    fontSize = 18.sp
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
-                ) {
-                    Text(
-                        text = "💭 Notes (Optional)",
-                        fontFamily = Poppins,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 16.sp,
-                        color = DarkGreen
-                    )
-                    
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
-                    Text(
-                        text = "How did it go? What did you learn?",
-                        fontFamily = Poppins,
-                        fontSize = 12.sp,
-                        color = Color.Gray
-                    )
-                    
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
-                    OutlinedTextField(
-                        value = notes,
-                        onValueChange = { notes = it },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(100.dp),
-                        placeholder = { 
-                            Text(
-                                "Jot down your thoughts...", 
-                                fontFamily = Poppins,
-                                fontSize = 14.sp
-                            ) 
-                        },
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = DarkGreen,
-                            unfocusedBorderColor = Color.LightGray
-                        ),
-                        shape = RoundedCornerShape(12.dp),
-                        maxLines = 4
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Button(
-                onClick = {
-                    if (instrument.isNotEmpty() && practiceFocus.isNotEmpty() && 
-                        startTime.isNotEmpty() && endTime.isNotEmpty()) {
-                        showSuccessDialog = true
-                    }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = DarkGreen,
-                    disabledContainerColor = Color.LightGray
-                ),
-                shape = RoundedCornerShape(16.dp),
-                enabled = instrument.isNotEmpty() && practiceFocus.isNotEmpty() && 
-                         startTime.isNotEmpty() && endTime.isNotEmpty()
-            ) {
+        },
+        text = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    text = if (instrument.isNotEmpty() && practiceFocus.isNotEmpty() && 
-                              startTime.isNotEmpty() && endTime.isNotEmpty()) 
-                              "Save Practice Session" else "Fill in required fields",
-                    fontSize = 16.sp,
-                    fontFamily = Poppins,
-                    fontWeight = FontWeight.Bold
+                    "Duration: ${durationSeconds / 60}:${String.format("%02d", durationSeconds % 60)}",
+                    fontFamily = Poppins, fontSize = 16.sp, fontWeight = FontWeight.Medium
+                )
+                Spacer(Modifier.height(16.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("⭐", fontSize = 24.sp)
+                    Spacer(Modifier.width(8.dp))
+                    Text("+$earnedXP XP", fontFamily = Poppins, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = DarkGreen)
+                }
+                Spacer(Modifier.height(20.dp))
+                LevelProgressBar(currentLevel, xpInCurrentLevel, xpForNextLevel, animatedProgress.value)
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    "Keep practicing to reach Level ${currentLevel + 1}!",
+                    fontFamily = Poppins, fontSize = 12.sp, color = Color.Gray, textAlign = TextAlign.Center
                 )
             }
-            
-            Spacer(modifier = Modifier.height(20.dp))
-        }
+        },
+        confirmButton = {
+            Button(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = DarkGreen),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("Awesome!", fontFamily = Poppins, fontWeight = FontWeight.Bold)
+            }
+        },
+        containerColor = WhiteBox,
+        shape = RoundedCornerShape(20.dp)
+    )
+}
 
-        if (showSuccessDialog) {
-            AlertDialog(
-                onDismissRequest = { showSuccessDialog = false },
-                title = {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            "Awesome!",
-                            fontFamily = Poppins,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 22.sp,
-                            color = DarkGreen
-                        )
-                    }
-                },
-                text = {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            "Practice session logged successfully!",
-                            fontFamily = Poppins,
-                            textAlign = TextAlign.Center,
-                            fontSize = 15.sp
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            "You're one step closer to mastery!",
-                            fontFamily = Poppins,
-                            fontSize = 14.sp,
-                            color = Color.Gray,
-                            textAlign = TextAlign.Center
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Surface(
-                            color = LightGreen.copy(alpha = 0.3f),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(12.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Text(
-                                    "Keep your streak going! 🔥",
-                                    fontFamily = Poppins,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = DarkGreen,
-                                    fontSize = 13.sp
-                                )
-                            }
-                        }
-                    }
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            showSuccessDialog = false
-                            navController.popBackStack()
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = DarkGreen),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text("Done", fontFamily = Poppins, fontWeight = FontWeight.Bold)
-                    }
-                },
-                dismissButton = {
-                    OutlinedButton(
-                        onClick = {
-                            showSuccessDialog = false
-                            instrument = ""
-                            practiceFocus = ""
-                            startTime = ""
-                            endTime = ""
-                            notes = ""
-                        },
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = DarkGreen
-                        )
-                    ) {
-                        Text("Log Another", fontFamily = Poppins, fontWeight = FontWeight.Bold)
-                    }
-                },
-                containerColor = WhiteBox,
-                shape = RoundedCornerShape(20.dp)
-            )
+@Composable
+private fun LevelProgressBar(level: Int, currentXP: Int, targetXP: Int, progress: Float) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("Level $level", fontFamily = Poppins, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = DarkGreen)
+            Text("$currentXP / $targetXP XP", fontFamily = Poppins, fontSize = 12.sp, color = Color.Gray)
+        }
+        Spacer(Modifier.height(8.dp))
+        Canvas(modifier = Modifier.fillMaxWidth().height(12.dp)) {
+            drawRoundRect(Color.LightGray.copy(alpha = 0.3f), cornerRadius = CornerRadius(24f, 24f))
+            if (progress > 0f) {
+                drawRoundRect(
+                    Color(0xFF2E5D45),
+                    size = Size(size.width * progress, size.height),
+                    cornerRadius = CornerRadius(24f, 24f)
+                )
+            }
         }
     }
 }
 
-fun calculateDuration(start: String, end: String): String {
-    return try {
-        val startParts = start.split(":")
-        val endParts = end.split(":")
-        
-        if (startParts.size == 2 && endParts.size == 2) {
-            val startMinutes = startParts[0].toInt() * 60 + startParts[1].toInt()
-            val endMinutes = endParts[0].toInt() * 60 + endParts[1].toInt()
-            val duration = if (endMinutes >= startMinutes) {
-                endMinutes - startMinutes
-            } else {
-                (24 * 60) - startMinutes + endMinutes
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun Step1_SessionDetails(
+    instrument: String, practiceType: String, practiceFocus: String,
+    onInstrumentChange: (String) -> Unit, onPracticeTypeChange: (String) -> Unit,
+    onPracticeFocusChange: (String) -> Unit, onNext: () -> Unit, onBack: () -> Unit
+) {
+    val context = LocalContext.current
+    var instrumentExpanded by remember { mutableStateOf(false) }
+    var typeExpanded by remember { mutableStateOf(false) }
+    val isValid = instrument.isNotEmpty() && practiceType.isNotEmpty() && practiceFocus.isNotEmpty()
+
+    Column(Modifier.fillMaxSize().background(WhiteBox)) {
+        StepHeader("Step 1 of 3: Session Details", onBack)
+
+        Column(
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp)
+        ) {
+            Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(16.dp)) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Text("Session Details", fontFamily = Poppins, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = DarkGreen)
+                    StyledDropdown(instrument, "Instrument", "Select instrument", INSTRUMENTS, instrumentExpanded, { instrumentExpanded = it }, onInstrumentChange)
+                    StyledDropdown(practiceType, "Practice Type", "Select type", PRACTICE_TYPES, typeExpanded, { typeExpanded = it }, onPracticeTypeChange)
+                    OutlinedTextField(
+                        value = practiceFocus, onValueChange = onPracticeFocusChange,
+                        label = { Text("Focus / Piece", fontFamily = Poppins) },
+                        placeholder = { Text("e.g. Bach Prelude, Scales", fontFamily = Poppins) },
+                        modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = DarkGreen, unfocusedBorderColor = Color.LightGray)
+                    )
+                }
             }
-            
-            val hours = duration / 60
-            val minutes = duration % 60
-            
-            if (hours > 0) {
-                "${hours}h ${minutes}m"
-            } else {
-                "${minutes}m"
+            Spacer(Modifier.weight(1f))
+            Button(
+                onClick = {
+                    if (isValid) onNext()
+                    else Toast.makeText(context, "Please fill all fields", Toast.LENGTH_SHORT).show()
+                },
+                enabled = isValid, modifier = Modifier.fillMaxWidth().height(56.dp),
+                shape = RoundedCornerShape(14.dp), colors = ButtonDefaults.buttonColors(containerColor = DarkGreen)
+            ) {
+                Text("Start Session", fontFamily = Poppins, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            }
+        }
+    }
+}
+
+@Composable
+fun Step2_LiveTimer(
+    practiceSessionViewModel: PracticeSessionViewModel,
+    onEnd: () -> Unit,
+    onBack: () -> Unit
+) {
+    val currentSession by practiceSessionViewModel.currentSession.collectAsState()
+    var elapsedSeconds by remember { mutableIntStateOf(0) }
+    
+    LaunchedEffect(currentSession) {
+        if (currentSession != null) {
+            while (currentSession != null) {
+                val startTime = currentSession?.startTime?.toDate()?.time ?: 0L
+                elapsedSeconds = ((System.currentTimeMillis() - startTime) / 1000).toInt()
+                delay(1000)
             }
         } else {
-            "Invalid time"
+            elapsedSeconds = 0
         }
-    } catch (_: Exception) {
-        "Invalid time"
+    }
+    
+    val minutes = elapsedSeconds / 60
+    val seconds = elapsedSeconds % 60
+    val isActive = currentSession != null
+    
+    Column(Modifier.fillMaxSize().background(WhiteBox)) {
+        StepHeader("Step 2 of 3: Practice Session", onBack)
+        
+        Column(
+            Modifier.fillMaxSize().padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                shape = RoundedCornerShape(24.dp),
+                elevation = CardDefaults.cardElevation(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(Modifier.padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("⏱️", fontSize = 64.sp)
+                    Spacer(Modifier.height(24.dp))
+                    Text(
+                        if (isActive) "Session in Progress" else "Ready to Start",
+                        fontSize = 18.sp, fontWeight = FontWeight.Medium, color = DarkGreen, fontFamily = Poppins
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        String.format("%02d:%02d", minutes, seconds),
+                        fontSize = 72.sp, fontWeight = FontWeight.Bold, color = DarkGreen, fontFamily = Poppins
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        when (minutes) {
+                            0 -> "seconds"
+                            1 -> "1 minute"
+                            else -> "$minutes minutes"
+                        },
+                        fontSize = 14.sp, color = Color.Gray, fontFamily = Poppins
+                    )
+                    Spacer(Modifier.height(32.dp))
+                    if (isActive) {
+                        Button(
+                            onClick = onEnd,
+                            modifier = Modifier.fillMaxWidth().height(56.dp),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = DarkGreen)
+                        ) {
+                            Text("End Session", fontFamily = Poppins, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        }
+                    }
+                }
+            }
+            if (isActive) {
+                Spacer(Modifier.height(24.dp))
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = LightGreen.copy(alpha = 0.3f)),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.MusicNote, null, tint = DarkGreen)
+                        Spacer(Modifier.width(12.dp))
+                        Text("Keep practicing! You're building your streak.", fontFamily = Poppins, color = DarkGreen, fontSize = 14.sp)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun Step3_CompleteSession(
+    difficulty: String, notes: String,
+    onDifficultyChange: (String) -> Unit, onNotesChange: (String) -> Unit,
+    practiceSessionViewModel: PracticeSessionViewModel,
+    onComplete: () -> Unit, onBack: () -> Unit
+) {
+    val isLoading by practiceSessionViewModel.isLoading.collectAsState()
+    var difficultyExpanded by remember { mutableStateOf(false) }
+    
+    Column(Modifier.fillMaxSize().background(WhiteBox)) {
+        StepHeader("Step 3 of 3: Session Details", onBack)
+        Column(
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp)
+        ) {
+            Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(16.dp)) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Difficulty", fontFamily = Poppins, fontWeight = FontWeight.SemiBold, color = DarkGreen)
+                    StyledDropdown(difficulty, "Level", "Select level", DIFFICULTIES, difficultyExpanded, { difficultyExpanded = it }, onDifficultyChange)
+                }
+            }
+            Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(16.dp)) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Notes (Optional)", fontFamily = Poppins, fontWeight = FontWeight.SemiBold, color = DarkGreen)
+                    OutlinedTextField(
+                        value = notes, onValueChange = onNotesChange,
+                        modifier = Modifier.fillMaxWidth().height(120.dp),
+                        placeholder = { Text("Reflections, obstacles, improvements", fontFamily = Poppins) },
+                        shape = RoundedCornerShape(12.dp), maxLines = 4,
+                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = DarkGreen, unfocusedBorderColor = Color.LightGray)
+                    )
+                }
+            }
+            Button(
+                onClick = onComplete,
+                enabled = difficulty.isNotEmpty() && !isLoading,
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = DarkGreen)
+            ) {
+                if (isLoading) CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                else Text("Log Session", fontFamily = Poppins, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            }
+        }
+    }
+}
+
+@Composable
+private fun StepHeader(stepText: String, onBack: () -> Unit) {
+    Box(Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(DarkGreen, CardAccent)))) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 30.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color.White, modifier = Modifier.size(26.dp))
+            }
+            Spacer(Modifier.width(8.dp))
+            Column {
+                Text("Log Practice", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White, fontFamily = Poppins)
+                Text(stepText, fontSize = 13.sp, color = Color.White.copy(alpha = 0.9f), fontFamily = Poppins)
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun StyledDropdown(
+    value: String, label: String, placeholder: String, items: List<String>,
+    expanded: Boolean, onExpandedChange: (Boolean) -> Unit, onValueChange: (String) -> Unit
+) {
+    key(value) {
+        ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { onExpandedChange(!expanded) }) {
+            OutlinedTextField(
+                value = value, onValueChange = {}, readOnly = true,
+                label = { Text(label, fontFamily = Poppins) },
+                placeholder = { Text(placeholder, fontFamily = Poppins) },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                modifier = Modifier.menuAnchor().fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = DarkGreen, unfocusedBorderColor = Color.LightGray)
+            )
+            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { onExpandedChange(false) }) {
+                items.forEach { item ->
+                    key(item) {
+                        DropdownMenuItem(
+                            text = { Text(item, fontFamily = Poppins) },
+                            onClick = {
+                                onValueChange(item)
+                                onExpandedChange(false)
+                            }
+                        )
+                    }
+                }
+            }
+        }
     }
 }
