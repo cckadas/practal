@@ -30,6 +30,7 @@ import com.itismob.s15.group7.practal.domain.controller.PostViewModel
 import com.itismob.s15.group7.practal.domain.model.Post
 import com.itismob.s15.group7.practal.ui.theme.Poppins
 import com.google.firebase.Timestamp
+import com.itismob.s15.group7.practal.domain.controller.PracticeSessionViewModel
 import java.util.concurrent.TimeUnit
 
 val CardAccent = Color(0xFF2E5D45)
@@ -57,6 +58,8 @@ fun DashboardScreen(
     navController: NavHostController,
     userViewModel: UserViewModel,
     postViewModel: PostViewModel
+    postViewModel: PostViewModel,
+    practiceSessionViewModel: PracticeSessionViewModel
 ) {
     var selectedTab by remember { mutableStateOf("home") }
 
@@ -82,6 +85,7 @@ fun DashboardScreen(
         when (selectedTab) {
             "home" -> DashboardHome(padding, navController, userViewModel, postViewModel)
             "progress" -> ProgressAnalyticsScreen(navController, userViewModel)
+            "progress" -> ProgressAnalyticsScreen(navController, userViewModel, practiceSessionViewModel)
             "leaderboard" -> LeaderboardScreen(navController, userViewModel)
             "clubs" -> ClubsScreen(navController)
             else -> DashboardHome(padding, navController, userViewModel, postViewModel)
@@ -233,6 +237,7 @@ fun ViewChallengeCard(navController: NavHostController) {
 
 @Composable
 fun PostCard(post: Post, userViewModel: UserViewModel, postViewModel: PostViewModel, navController: NavHostController,) {
+fun PostCard(post: Post, userViewModel: UserViewModel, postViewModel: PostViewModel, navController: NavHostController) {
     val loggedInUser by userViewModel.loggedInUser.collectAsState()
     var showComments by remember { mutableStateOf(false) }
     var commentText by remember { mutableStateOf("") }
