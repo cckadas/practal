@@ -57,7 +57,6 @@ fun formatTimeAgo(timestamp: Timestamp): String {
 fun DashboardScreen(
     navController: NavHostController,
     userViewModel: UserViewModel,
-    postViewModel: PostViewModel
     postViewModel: PostViewModel,
     practiceSessionViewModel: PracticeSessionViewModel
 ) {
@@ -84,7 +83,6 @@ fun DashboardScreen(
     ) { padding ->
         when (selectedTab) {
             "home" -> DashboardHome(padding, navController, userViewModel, postViewModel)
-            "progress" -> ProgressAnalyticsScreen(navController, userViewModel)
             "progress" -> ProgressAnalyticsScreen(navController, userViewModel, practiceSessionViewModel)
             "leaderboard" -> LeaderboardScreen(navController, userViewModel)
             "clubs" -> ClubsScreen(navController)
@@ -236,7 +234,6 @@ fun ViewChallengeCard(navController: NavHostController) {
 }
 
 @Composable
-fun PostCard(post: Post, userViewModel: UserViewModel, postViewModel: PostViewModel, navController: NavHostController,) {
 fun PostCard(post: Post, userViewModel: UserViewModel, postViewModel: PostViewModel, navController: NavHostController) {
     val loggedInUser by userViewModel.loggedInUser.collectAsState()
     var showComments by remember { mutableStateOf(false) }
