@@ -61,14 +61,36 @@ class PracticeSessionViewModel(private val userViewModel: UserViewModel) : ViewM
         Log.d("PracticeSession", "✓ Started session: ${session.id}, user: $userId, instrument: $instrument")
     }
 
+    // get difficulty multiplier for xp calc
+    fun getDifficultyMultiplier(difficulty: String): Double = when (difficulty.lowercase()) {
+        "beginner" -> 1.0
+        "intermediate" -> 1.5
+        "advanced" -> 2.0
+        "expert" -> 2.5
+        else -> 1.0
+    }
+
+    // format duration in HH:MM:SS
+    fun formatDuration(seconds: Int): String {
+        val hours = seconds / 3600
+        val minutes = (seconds % 3600) / 60
+        val secs = seconds % 60
+        return String.format("%02d:%02d:%02d", hours, minutes, secs)
+    }
+
     fun endPracticeSession(
         notes: String = "",
-        difficulty: String = ""
+        difficulty: String = "",
+        frozenDurationSeconds: Int? = null
     ) {
         val currentSession = _currentSession.value ?: return
         val endTime = Timestamp.now()
-        val durationSeconds = (endTime.seconds - currentSession.startTime.seconds).toInt()
-        val durationMinutes = durationSeconds / 60 // Keep for backward compatibility
+        
+        // use frozen duration if provided, otherwise calculate from timestamps
+        val durationSeconds = frozenDurationSeconds ?: (endTime.seconds - currentSession.startTime.seconds).toInt()
+        val durationMinutes = durationSeconds / 60
+
+        Log.d("PracticeSession", "Ending session with duration: ${durationSeconds}s (${durationMinutes}min) - Frozen: ${frozenDurationSeconds != null}")
 
         val completedSession = currentSession.copy(
             endTime = endTime,
@@ -133,7 +155,7 @@ class PracticeSessionViewModel(private val userViewModel: UserViewModel) : ViewM
         try {
             Log.d("PracticeSession", "Updating stats for user: $userEmail")
             
-            // Find user document by email
+            // find user document by email
             val userQuery = db.collection("users")
                 .whereEqualTo("email", userEmail)
                 .limit(1)
@@ -143,18 +165,18 @@ class PracticeSessionViewModel(private val userViewModel: UserViewModel) : ViewM
             if (userQuery.documents.isNotEmpty()) {
                 val userDoc = userQuery.documents[0]
                 
-                // Calculate XP earned based on difficulty and duration
+                // calculate xp earned based on difficulty and duration
                 val earnedXP = calculateXP(session.durationMinutes, session.difficulty)
                 val currentXP = userDoc.getLong("xp")?.toInt() ?: 0
                 val currentLevel = userDoc.getLong("level")?.toInt() ?: 1
                 val newXP = currentXP + earnedXP
                 
-                // Get detailed level information
+                // get detailed level information
                 val currentLevelInfo = computeLevel(currentXP)
                 val newLevelInfo = computeLevel(newXP)
                 val newLevel = newLevelInfo.level
                 
-                // Log detailed XP progress
+                // log detailed xp progress
                 Log.d("PracticeSession", "XP PROGRESS-------------------------")
                 Log.d("PracticeSession", "Current Level: ${currentLevelInfo.level} (${currentLevelInfo.title})")
                 Log.d("PracticeSession", "Current XP in Level: ${currentLevelInfo.currentXP} / ${currentLevelInfo.xpToNextLevel}")
@@ -169,7 +191,7 @@ class PracticeSessionViewModel(private val userViewModel: UserViewModel) : ViewM
                 }
                 Log.d("PracticeSession", "------------------------------------")
                 
-                // Update XP and level first
+                // update xp and level first
                 db.collection("users").document(userDoc.id).update(
                     mapOf(
                         "xp" to newXP,
@@ -177,7 +199,7 @@ class PracticeSessionViewModel(private val userViewModel: UserViewModel) : ViewM
                     )
                 ).await()
                 
-                // Fetch all sessions for this user to recalculate comprehensive stats
+                // fetch all sessions for this user to recalculate comprehensive stats
                 val allSessions = db.collection("practice_sessions")
                     .whereEqualTo("userId", userEmail)
                     .get()
@@ -185,10 +207,10 @@ class PracticeSessionViewModel(private val userViewModel: UserViewModel) : ViewM
                     .documents
                     .mapNotNull { it.toObject(PracticeSession::class.java) }
                 
-                // Use centralized manager to calculate all stats (hours, streaks, weekly/monthly counts)
+                // use centralized manager to calculate all stats (hours, streaks, weekly/monthly counts)
                 val stats = UserStatsManager.calculateStatsFromSessions(userEmail, allSessions, verbose = true)
                 
-                // Update Firebase with calculated stats
+                // update firebase with calculated stats
                 UserStatsManager.updateUserStatsIfChanged(db, userEmail, stats, verbose = true)
                 
                 if (newLevel > currentLevel) {
@@ -205,24 +227,18 @@ class PracticeSessionViewModel(private val userViewModel: UserViewModel) : ViewM
     }
     
     /**
-     * Calculate XP earned based on practice duration and difficulty
-     * Base XP: 1 XP per minute
-     * Difficulty multipliers: Beginner (1.0x), Intermediate (1.5x), Advanced (2.0x), Expert (2.5x)
+     * calculate xp earned based on practice duration and difficulty
+     * base xp: 1 xp per minute
+     * uses getDifficultyMultiplier() for consistent multiplier values
      */
     private fun calculateXP(durationMinutes: Int, difficulty: String): Int {
         val baseXP = durationMinutes
-        val multiplier = when (difficulty.lowercase()) {
-            "beginner" -> 1.0
-            "intermediate" -> 1.5
-            "advanced" -> 2.0
-            "expert" -> 2.5
-            else -> 1.0 // Default to beginner if difficulty not specified
-        }
+        val multiplier = getDifficultyMultiplier(difficulty)
         return (baseXP * multiplier).toInt()
     }
     
-    // Note: Level calculation is handled by the centralized computeLevel() function
-    // from domain.model.LevelSystem.kt
+    // note: level calculation is handled by the centralized computelevel() function
+    // from domain.model.levelsystem.kt
 
     fun loadUserPracticeSessions() {
         val userId = userViewModel.loggedInUser.value?.email
