@@ -28,6 +28,7 @@ import com.itismob.s15.group7.practal.LightGreen
 import com.itismob.s15.group7.practal.WhiteBox
 import com.itismob.s15.group7.practal.domain.controller.PracticeSessionViewModel
 import com.itismob.s15.group7.practal.domain.controller.UserViewModel
+import com.itismob.s15.group7.practal.domain.model.PracticeSession
 import java.util.Calendar
 import java.util.Date
 import com.itismob.s15.group7.practal.ui.theme.Poppins
@@ -286,7 +287,7 @@ fun StatsCard(
 }
 
 @Composable
-fun PracticeFrequencyChart(filter: String, practiceSessions: List<com.itismob.s15.group7.practal.domain.model.PracticeSession> = emptyList()) {
+fun PracticeFrequencyChart(filter: String, practiceSessions: List<PracticeSession> = emptyList()) {
     val days = when (filter) {
         "Weekly" -> listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
         "Monthly" -> listOf("W1", "W2", "W3", "W4")
@@ -420,7 +421,7 @@ fun InstrumentBreakdownItem(instrument: String, percentage: Int, color: Color) {
 }
 
 @Composable
-fun PracticeSessionItem(session: com.itismob.s15.group7.practal.domain.model.PracticeSession) {
+fun PracticeSessionItem(session: PracticeSession) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -498,11 +499,11 @@ fun SessionItemSkeleton() {
     }
 }
 
-// Helper Functions
+// helper
 private fun filterSessionsByPeriod(
-    sessions: List<com.itismob.s15.group7.practal.domain.model.PracticeSession>,
+    sessions: List<PracticeSession>,
     filter: String
-): List<com.itismob.s15.group7.practal.domain.model.PracticeSession> {
+): List<PracticeSession> {
     return sessions.filter { session ->
         try {
             val sessionDate = session.startTime.toDate()
@@ -526,7 +527,7 @@ private fun filterSessionsByPeriod(
 }
 
 private fun calculateChartHeights(
-    sessions: List<com.itismob.s15.group7.practal.domain.model.PracticeSession>,
+    sessions: List<PracticeSession>,
     filter: String
 ): List<Float> {
     val buckets = when (filter) {

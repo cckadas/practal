@@ -21,12 +21,13 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.itismob.s15.group7.practal.*
 import com.itismob.s15.group7.practal.domain.controller.*
+import com.itismob.s15.group7.practal.domain.controller.AchievementViewModel
 import com.itismob.s15.group7.practal.ui.theme.Poppins
 import kotlinx.coroutines.*
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Size
 
-// Constants
+// constants
 private val INSTRUMENTS = listOf(
     "🎹 Piano", "🎸 Guitar", "🎻 Violin", "🎻 Cello", "🪈 Flute",
     "🎷 Clarinet", "🎷 Saxophone", "🎺 Trumpet", "🥁 Drums", "🎸 Bass",
@@ -45,7 +46,7 @@ fun LogPracticeSessionScreen(
     navController: NavHostController,
     practiceSessionViewModel: PracticeSessionViewModel,
     userViewModel: UserViewModel,
-    achievementViewModel: com.itismob.s15.group7.practal.domain.controller.AchievementViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+    achievementViewModel: AchievementViewModel = viewModel()
 ) {
     var currentStep by remember { mutableIntStateOf(1) }
     var instrument by remember { mutableStateOf("") }
@@ -102,7 +103,7 @@ fun LogPracticeSessionScreen(
                     delay(1500)
                     userViewModel.getUserList()
                     
-                    // Check and unlock achievements after session
+                    // check and unlock achievements after session
                     loggedInUser?.let { user ->
                         achievementViewModel.checkAndUnlockAchievements(user)
                     }
