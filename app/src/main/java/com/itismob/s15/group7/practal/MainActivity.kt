@@ -91,7 +91,7 @@ fun PractalApp() {
         composable("analytics") { ProgressAnalyticsScreen(navController, userViewModel, practiceSessionViewModel) }
         composable("leaderboard") { LeaderboardScreen(
             navController,
-            viewModel = TODO()
+            viewModel = userViewModel
         ) }
         composable("clubs") { ClubsScreen(navController, clubViewModel, userViewModel) }
 
