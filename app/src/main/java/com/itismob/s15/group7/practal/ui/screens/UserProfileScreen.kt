@@ -91,7 +91,6 @@ fun computeLevel(xp: Int): UserLevel {
 fun UserProfileScreen(
     navController: NavHostController,
     userViewModel: UserViewModel,
-    achievementViewModel: com.itismob.s15.group7.practal.domain.controller.AchievementViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
     achievementViewModel: AchievementViewModel = viewModel()
 ) {
     val loggedInUser by userViewModel.loggedInUser.collectAsState()
