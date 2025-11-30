@@ -1,5 +1,6 @@
 package com.itismob.s15.group7.practal.ui.screens
 
+import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -60,48 +61,44 @@ fun UserProfileScreen(
     
     val userId = loggedInUser?.id ?: ""
     
-    // reload achievements and user data every time screen is opened
-    LaunchedEffect(Unit) {
-        android.util.Log.d("UserProfileScreen", "Screen opened - userId: $userId")
-        // refresh user data to get latest XP and level
+    // refresh user data every time screen composition happens (to get latest XP)
+    LaunchedEffect(key1 = true) {
+        Log.d("UserProfileScreen", "Screen refreshing - userId: $userId")
         userViewModel.getUserList()
-        
-        if (userId.isNotEmpty()) {
-            achievementViewModel.loadUserAchievements(userId)
-        }
     }
     
-    // log level info whenever user XP changes
-    LaunchedEffect(loggedInUser?.xp) {
-        loggedInUser?.let { user ->
-            val levelInfo = computeLevel(user.xp)
-            android.util.Log.d("UserProfileScreen", "━━━━━━━━━━ USER LEVEL INFO ━━━━━━━━━━")
-            android.util.Log.d("UserProfileScreen", "User: ${user.email}")
-            android.util.Log.d("UserProfileScreen", "Total XP: ${user.xp}")
-            android.util.Log.d("UserProfileScreen", "Current Level: ${levelInfo.level} (${levelInfo.title})")
-            android.util.Log.d("UserProfileScreen", "XP in Current Level: ${levelInfo.currentXP} / ${levelInfo.xpToNextLevel}")
-            android.util.Log.d("UserProfileScreen", "XP to Next Level: ${levelInfo.xpToNextLevel - levelInfo.currentXP}")
-            android.util.Log.d("UserProfileScreen", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-            
-            android.util.Log.d("UserProfileScreen", "Checking achievements for user: ${user.email}")
-            achievementViewModel.checkAndUnlockAchievements(user)
-        }
-    }
-    
+    // load achievements when userId changes
     LaunchedEffect(userId) {
         if (userId.isNotEmpty()) {
             achievementViewModel.loadUserAchievements(userId)
         }
     }
     
+    // log level info and check achievements whenever user XP changes
+    LaunchedEffect(loggedInUser?.xp) {
+        loggedInUser?.let { user ->
+            val levelInfo = computeLevel(user.xp)
+            Log.d("UserProfileScreen", "USER LEVEL INFO---------------------")
+            Log.d("UserProfileScreen", "User: ${user.email}")
+            Log.d("UserProfileScreen", "Total XP: ${user.xp}")
+            Log.d("UserProfileScreen", "Current Level: ${levelInfo.level} (${levelInfo.title})")
+            Log.d("UserProfileScreen", "XP in Current Level: ${levelInfo.currentXP} / ${levelInfo.xpToNextLevel}")
+            Log.d("UserProfileScreen", "XP to Next Level: ${levelInfo.xpToNextLevel - levelInfo.currentXP}")
+            Log.d("UserProfileScreen", "------------------------------------")
+            
+            Log.d("UserProfileScreen", "Checking achievements for user: ${user.email}")
+            achievementViewModel.checkAndUnlockAchievements(user)
+        }
+    }
+    
     val unlockedAchievements = achievementViewModel.getUnlockedAchievements(userId)
     
     LaunchedEffect(allAchievements.size, userAchievements.size, unlockedAchievements.size) {
-        android.util.Log.d("UserProfileScreen", "Total achievements: ${allAchievements.size}, User achievements: ${userAchievements.size}")
-        android.util.Log.d("UserProfileScreen", "Unlocked: ${unlockedAchievements.size}")
-        android.util.Log.d("UserProfileScreen", "UserAchievements details:")
+        Log.d("UserProfileScreen", "Total achievements: ${allAchievements.size}, User achievements: ${userAchievements.size}")
+        Log.d("UserProfileScreen", "Unlocked: ${unlockedAchievements.size}")
+        Log.d("UserProfileScreen", "UserAchievements details:")
         userAchievements.forEach { ua ->
-            android.util.Log.d("UserProfileScreen", "  - achievementId: ${ua.achievementId}, completed: ${ua.completed}, progress: ${ua.progress}")
+            Log.d("UserProfileScreen", "  - achievementId: ${ua.achievementId}, completed: ${ua.completed}, progress: ${ua.progress}")
         }
     }
 

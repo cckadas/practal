@@ -1,6 +1,7 @@
 package com.itismob.s15.group7.practal.ui.screens
 
 import android.net.Uri
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -70,13 +71,13 @@ fun OtherProfileScreen(
     LaunchedEffect(visitedUser?.xp) {
         visitedUser?.let { user ->
             val levelInfo = computeLevel(user.xp)
-            android.util.Log.d("OtherProfileScreen", "USER LEVEL INFO---------------------")
-            android.util.Log.d("OtherProfileScreen", "Viewing User: ${user.email}")
-            android.util.Log.d("OtherProfileScreen", "Total XP: ${user.xp}")
-            android.util.Log.d("OtherProfileScreen", "Current Level: ${levelInfo.level} (${levelInfo.title})")
-            android.util.Log.d("OtherProfileScreen", "XP in Current Level: ${levelInfo.currentXP} / ${levelInfo.xpToNextLevel}")
-            android.util.Log.d("OtherProfileScreen", "XP to Next Level: ${levelInfo.xpToNextLevel - levelInfo.currentXP}")
-            android.util.Log.d("OtherProfileScreen", "------------------------------------")
+            Log.d("OtherProfileScreen", "USER LEVEL INFO---------------------")
+            Log.d("OtherProfileScreen", "Viewing User: ${user.email}")
+            Log.d("OtherProfileScreen", "Total XP: ${user.xp}")
+            Log.d("OtherProfileScreen", "Current Level: ${levelInfo.level} (${levelInfo.title})")
+            Log.d("OtherProfileScreen", "XP in Current Level: ${levelInfo.currentXP} / ${levelInfo.xpToNextLevel}")
+            Log.d("OtherProfileScreen", "XP to Next Level: ${levelInfo.xpToNextLevel - levelInfo.currentXP}")
+            Log.d("OtherProfileScreen", "------------------------------------")
         }
     }
     
