@@ -27,6 +27,7 @@ import com.itismob.s15.group7.practal.DarkGreen
 import com.itismob.s15.group7.practal.WhiteBox
 import com.itismob.s15.group7.practal.domain.controller.UserViewModel
 import com.itismob.s15.group7.practal.domain.controller.PostViewModel
+import com.itismob.s15.group7.practal.domain.controller.ClubViewModel
 import com.itismob.s15.group7.practal.domain.model.Post
 import com.itismob.s15.group7.practal.ui.theme.Poppins
 import com.google.firebase.Timestamp
@@ -58,7 +59,8 @@ fun DashboardScreen(
     navController: NavHostController,
     userViewModel: UserViewModel,
     postViewModel: PostViewModel,
-    practiceSessionViewModel: PracticeSessionViewModel
+    practiceSessionViewModel: PracticeSessionViewModel,
+    clubViewModel: ClubViewModel
 ) {
     var selectedTab by remember { mutableStateOf("home") }
 
@@ -85,7 +87,7 @@ fun DashboardScreen(
             "home" -> DashboardHome(padding, navController, userViewModel, postViewModel)
             "progress" -> ProgressAnalyticsScreen(navController, userViewModel, practiceSessionViewModel)
             "leaderboard" -> LeaderboardScreen(navController, userViewModel)
-            "clubs" -> ClubsScreen(navController)
+            "clubs" -> ClubsScreen(navController, clubViewModel, userViewModel)
             else -> DashboardHome(padding, navController, userViewModel, postViewModel)
         }
     }
