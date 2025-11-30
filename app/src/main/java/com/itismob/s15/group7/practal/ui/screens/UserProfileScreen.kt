@@ -123,6 +123,7 @@ fun UserProfileScreen(
     }
     
     val unlockedAchievements = userAchievements.filter { it.completed }
+    val unlockedAchievements = achievementViewModel.getUnlockedAchievements(userId)
     
     LaunchedEffect(allAchievements.size, userAchievements.size, unlockedAchievements.size) {
         android.util.Log.d("UserProfileScreen", "Total achievements: ${allAchievements.size}, User achievements: ${userAchievements.size}")
@@ -215,6 +216,7 @@ fun UserProfileScreen(
 
             item {
                 ProfileRecentAchievements(navController, allAchievements, userAchievements)
+                ProfileRecentAchievements(navController, achievementViewModel, userAchievements)
                 Spacer(modifier = Modifier.height(24.dp))
             }
         }
@@ -513,6 +515,7 @@ fun ProfileInfoChip(text: String) {
 fun ProfileRecentAchievements(
     navController: NavHostController,
     allAchievements: List<com.itismob.s15.group7.practal.domain.model.Achievement>,
+    achievementViewModel: AchievementViewModel,
     userAchievements: List<com.itismob.s15.group7.practal.domain.model.UserAchievement>
 ) {
     val dateFormat = java.text.SimpleDateFormat("MMM dd, yyyy", java.util.Locale.getDefault())
@@ -522,6 +525,7 @@ fun ProfileRecentAchievements(
         .take(6)
         .mapNotNull { ua ->
             allAchievements.find { it.id == ua.achievementId }?.let { achievement ->
+            achievementViewModel.getAchievementById(ua.achievementId)?.let { achievement ->
                 Triple(achievement, ua, ua.unlockedDate?.toDate()?.let { dateFormat.format(it) } ?: "")
             }
         }

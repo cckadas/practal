@@ -48,32 +48,27 @@ fun AchievementsScreen(
     val userAchievements by achievementViewModel.userAchievements.collectAsState()
     val userId = loggedInUser?.id ?: ""
     
-    // Load and check achievements on screen open
-    LaunchedEffect(Unit) {
+    // load and check achievements when screen opens or userId changes
+    LaunchedEffect(userId) {
         if (userId.isNotEmpty()) {
             loggedInUser?.let { achievementViewModel.checkAndUnlockAchievements(it) }
             achievementViewModel.loadUserAchievements(userId)
         }
     }
-    
-    LaunchedEffect(userId) {
-        if (userId.isNotEmpty()) achievementViewModel.loadUserAchievements(userId)
-    }
     var selectedCategory by remember { mutableStateOf("All") }
     
-    val filteredAchievements = if (selectedCategory == "All") achievements 
-        else achievements.filter { mapCategory(it.category) == selectedCategory }
-    
-    val unlockedAchievements = userAchievements.filter { it.completed }
-    val unlockedCount = unlockedAchievements.size
-    val earnedXP = unlockedAchievements.mapNotNull { ua -> achievements.find { it.id == ua.achievementId }?.xpReward }.sum()
-    val progressPercentage = if (achievements.isNotEmpty()) (unlockedCount * 100 / achievements.size) else 0
-    
-    // Debug logging
-    LaunchedEffect(achievements.size, userAchievements.size, unlockedCount) {
-        android.util.Log.d("AchievementsScreen", "Achievements: ${achievements.size}, User: ${userAchievements.size}, Unlocked: $unlockedCount")
-        userAchievements.forEach { android.util.Log.d("AchievementsScreen", "  - ${it.achievementId}: completed=${it.completed}, progress=${it.progress}") }
+    val filteredAchievements = when (selectedCategory) {
+        "All" -> achievements
+        "In Progress" -> {
+            val inProgressIds = achievementViewModel.getInProgressAchievements(userId).map { it.achievementId }
+            achievements.filter { it.id in inProgressIds }
+        }
+        else -> achievements.filter { mapCategory(it.category) == selectedCategory }
     }
+    
+    val unlockedCount = achievementViewModel.getUnlockedAchievements(userId).size
+    val earnedXP = achievementViewModel.getTotalAchievementXP(userId)
+    val progressPercentage = if (achievements.isNotEmpty()) (unlockedCount * 100 / achievements.size) else 0
 
     Column(
         modifier = Modifier
@@ -165,8 +160,10 @@ fun AchievementsScreen(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceEvenly
                         ) {
+                            val inProgressCount = achievementViewModel.getInProgressAchievements(userId).size
                             AchievementMiniStat("🔓", unlockedCount.toString(), "Unlocked")
                             AchievementMiniStat("🔒", (achievements.size - unlockedCount).toString(), "Locked")
+                            AchievementMiniStat("🎯", inProgressCount.toString(), "In Progress")
                             AchievementMiniStat("⭐", earnedXP.toString(), "XP Earned")
                         }
                     }
@@ -233,10 +230,11 @@ fun AchievementsScreen(
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         rowAchievements.forEach { achievement ->
-                            val userAchievement = userAchievements.find { it.achievementId == achievement.id }
                             AchievementCard(
                                 achievement = achievement,
-                                userAchievement = userAchievement,
+                                isUnlocked = achievementViewModel.isAchievementUnlocked(userId, achievement.id),
+                                progress = achievementViewModel.getAchievementProgress(userId, achievement.id),
+                                userAchievements = userAchievements,
                                 modifier = Modifier.weight(1f)
                             )
                         }
@@ -264,14 +262,14 @@ private fun mapCategory(category: String): String = when (category) {
 @Composable
 fun AchievementCard(
     achievement: Achievement,
-    userAchievement: UserAchievement?,
+    isUnlocked: Boolean,
+    progress: Int,
+    userAchievements: List<UserAchievement>,
     modifier: Modifier = Modifier
 ) {
-    val isUnlocked = userAchievement?.completed ?: false
-    val progress = userAchievement?.progress ?: 0
     val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
     val unlockedDate = if (isUnlocked) {
-        userAchievement?.unlockedDate?.toDate()?.let { dateFormat.format(it) }
+        userAchievements.find { it.achievementId == achievement.id }?.unlockedDate?.toDate()?.let { dateFormat.format(it) }
     } else null
     
     val cardColor = if (isUnlocked) {
@@ -439,6 +437,7 @@ fun achievementCategoryColor(category: String): Color = when (category) {
 
 private fun getCategoryEmoji(category: String): String = when (category) {
     "All" -> "🎯"
+    "In Progress" -> "⏳"
     "Practice" -> "🎵"
     "Challenge" -> "🏆"
     "Social" -> "⭐"
@@ -447,4 +446,4 @@ private fun getCategoryEmoji(category: String): String = when (category) {
 }
 
 // constants
-private val CATEGORIES = listOf("All", "Practice", "Challenge", "Social", "Special")
+private val CATEGORIES = listOf("All", "In Progress", "Practice", "Challenge", "Social", "Special")

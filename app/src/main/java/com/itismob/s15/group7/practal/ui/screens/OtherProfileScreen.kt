@@ -64,7 +64,7 @@ fun OtherProfileScreen(
         }
     }
     
-    val unlockedAchievements = userAchievements.filter { it.completed }
+    val unlockedAchievements = achievementViewModel.getUnlockedAchievements(userId)
 
     Column(
         modifier = Modifier
@@ -147,6 +147,7 @@ fun OtherProfileScreen(
 
             item {
                 OtherProfileRecentAchievements(visitedUser, navController, allAchievements, userAchievements)
+                OtherProfileRecentAchievements(visitedUser, navController, achievementViewModel, userAchievements)
                 Spacer(modifier = Modifier.height(24.dp))
             }
         }
@@ -422,6 +423,7 @@ fun OtherProfileRecentAchievements(
     visitedUser: User?,
     navController: NavHostController,
     achievements: List<Achievement>,
+    achievementViewModel: AchievementViewModel,
     userAchievements: List<UserAchievement>
 ) {
     val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
@@ -431,6 +433,7 @@ fun OtherProfileRecentAchievements(
         .take(6)
         .mapNotNull { ua ->
             achievements.find { it.id == ua.achievementId }?.let { achievement ->
+            achievementViewModel.getAchievementById(ua.achievementId)?.let { achievement ->
                 Triple(achievement, ua, ua.unlockedDate?.toDate()?.let { dateFormat.format(it) } ?: "")
             }
         }

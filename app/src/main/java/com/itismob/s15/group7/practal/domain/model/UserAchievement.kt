@@ -6,6 +6,6 @@ data class UserAchievement(
     val userId: String = "",
     val achievementId: String = "",
     val unlockedDate: Timestamp = Timestamp.now(),
-    val progress: Int = 0,
+    val progress: Int = 0, // 0-100 percentage
     val completed: Boolean = false
 )

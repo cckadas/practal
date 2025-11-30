@@ -5,7 +5,7 @@ data class Achievement(
     val title: String = "",
     val description: String = "",
     val badgeIcon: String = "",
-    val category: String = "", // practice/challenge/social/technique
-    val requirement: Int = 0, // hours, days, challenges
+    val category: String = "", // practice, challenge, social, special
+    val requirement: Int = 0,
     val xpReward: Int = 0
 )

@@ -55,28 +55,33 @@ class AchievementViewModel : ViewModel() {
                 
                 val userAchs = value?.toObjects(UserAchievement::class.java) ?: emptyList()
                 _userAchievements.value = userAchs
-                Log.d(TAG, "Loaded ${userAchs.size} user achievements")
-                userAchs.forEach { Log.d(TAG, "  UserAchievement: id=${it.achievementId}, completed=${it.completed}, progress=${it.progress}") }
+                Log.d(TAG, "Loaded ${userAchs.size} achievements for user $userId")
             }
     }
     
     // check achievements
     
-    suspend fun checkAndUnlockAchievements(user: User) {
+    fun checkAndUnlockAchievements(user: User) {
         if (user.id.isEmpty()) return
         
-        checkPracticeHoursAchievements(user)
-        checkStreakAchievements(user)
-        checkChallengeAchievements(user)
-        checkCommunityAchievements(user)
-        checkSpecialAchievements(user)
+        viewModelScope.launch {
+            checkPracticeHoursAchievements(user)
+            checkStreakAchievements(user)
+            checkChallengeAchievements(user)
+            checkCommunityAchievements(user)
+            checkSpecialAchievements(user)
+        }
     }
     
     private suspend fun checkPracticeHoursAchievements(user: User) {
+        Log.d(TAG, "Checking practice hours achievements for user ${user.id}, totalHours: ${user.totalPracticeHours}")
         PRACTICE_HOURS_MILESTONES.forEach { (id, hours) ->
-            val progress = (user.totalPracticeHours / hours * 100).toInt()
             if (user.totalPracticeHours >= hours) {
-                unlockAchievement(user.id, id, progress)
+                unlockAchievement(user.id, id, 100)
+            } else {
+                val progress = calculateProgress(user.totalPracticeHours, hours)
+                Log.d(TAG, "Achievement $id: ${user.totalPracticeHours}/$hours hours = $progress%")
+                updateProgress(user.id, id, progress)
             }
         }
     }
@@ -91,16 +96,8 @@ class AchievementViewModel : ViewModel() {
         }
     }
     
-    private suspend fun checkChallengeAchievements(user: User) {
-        val count = user.challenges.size
-        CHALLENGE_MILESTONES.forEach { (id, required) ->
-            if (count >= required) {
-                unlockAchievement(user.id, id, 100)
-            } else {
-                updateProgress(user.id, id, calculateProgress(count, required))
-            }
-        }
-    }
+    private suspend fun checkChallengeAchievements(user: User) =
+        checkMilestones(user.id, user.challenges.size, CHALLENGE_MILESTONES)
     
     private suspend fun checkCommunityAchievements(user: User) {
         checkMilestones(user.id, user.followers.size, FOLLOWER_MILESTONES)
@@ -129,22 +126,16 @@ class AchievementViewModel : ViewModel() {
     
     private suspend fun checkMilestones(userId: String, current: Int, milestones: List<Pair<String, Int>>) {
         milestones.forEach { (id, required) ->
-            if (current >= required) {
-                unlockAchievement(userId, id, 100)
-            } else {
-                updateProgress(userId, id, calculateProgress(current, required))
-            }
+            val progress = if (current >= required) 100 else calculateProgress(current, required)
+            if (progress >= 100) unlockAchievement(userId, id, 100)
+            else updateProgress(userId, id, progress)
         }
     }
     
-    private suspend fun checkMilestone(userId: String, current: Int, achievementId: String, required: Int) {
-        if (current >= required) {
-            unlockAchievement(userId, achievementId, 100)
-        } else {
-            updateProgress(userId, achievementId, calculateProgress(current, required))
-        }
-    }
+    private suspend fun checkMilestone(userId: String, current: Int, achievementId: String, required: Int) =
+        checkMilestones(userId, current, listOf(achievementId to required))
     
+    // calculate progress percentage 0-100
     private fun calculateProgress(current: Int, required: Int): Int =
         ((current.toFloat() / required) * 100).toInt()
     
@@ -199,7 +190,7 @@ class AchievementViewModel : ViewModel() {
     
     private suspend fun awardAchievementXP(userId: String, achievementId: String) {
         try {
-            val achievement = _achievements.value.find { it.id == achievementId } ?: return
+            val achievement = getAchievementById(achievementId) ?: return
             val userRef = db.collection("users").document(userId)
             val userDoc = userRef.get().await()
             
@@ -213,11 +204,28 @@ class AchievementViewModel : ViewModel() {
         }
     }
     
+    // get the progress percentage for a specific achievement (0-100)
     fun getAchievementProgress(userId: String, achievementId: String): Int =
         _userAchievements.value.find { it.userId == userId && it.achievementId == achievementId }?.progress ?: 0
     
+    // check if a specific achievement is completed
     fun isAchievementUnlocked(userId: String, achievementId: String): Boolean =
         _userAchievements.value.find { it.userId == userId && it.achievementId == achievementId }?.completed ?: false
+    
+    // get achievement details by ID
+    fun getAchievementById(achievementId: String): Achievement? =
+        _achievements.value.find { it.id == achievementId }
+    
+    // get all unlocked achievements for a user
+    fun getUnlockedAchievements(userId: String): List<UserAchievement> =
+        _userAchievements.value.filter { it.userId == userId && it.completed }
+    
+    // get achievements in progress (unlocked but not completed)
+    fun getInProgressAchievements(userId: String): List<UserAchievement> =
+        _userAchievements.value.filter { it.userId == userId && !it.completed && it.progress > 0 }
+    
+    fun getTotalAchievementXP(userId: String): Int =
+        getUnlockedAchievements(userId).mapNotNull { getAchievementById(it.achievementId)?.xpReward }.sum()
     
     // setup
     
