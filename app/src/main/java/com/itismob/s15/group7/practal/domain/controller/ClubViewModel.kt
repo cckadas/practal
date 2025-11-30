@@ -91,18 +91,20 @@ class ClubViewModel : ViewModel() {
             val userClubRef = firestore.collection("userClubs").document("${userId}_${clubId}")
 
             firestore.runTransaction { transaction ->
-                // Add to userClubs collection
+                // read
+                val clubSnapshot = transaction.get(clubRef)
+                val userSnapshot = transaction.get(userRef)
+                
+                // add
                 transaction.set(userClubRef, userClub)
 
-                // Increment member count
-                val clubSnapshot = transaction.get(clubRef)
+                // increment member count
                 val club = clubSnapshot.toObject(Club::class.java)
                 club?.let {
                     transaction.update(clubRef, "memberCount", it.memberCount + 1)
                 }
 
-                // Update user's clubs
-                val userSnapshot = transaction.get(userRef)
+                // update user clubs
                 val currentClubs = userSnapshot.get("clubs") as? List<*> ?: emptyList<String>()
                 val updatedClubs = (currentClubs + clubId).distinct()
                 transaction.update(userRef, "clubs", updatedClubs)
