@@ -23,6 +23,7 @@ import com.itismob.s15.group7.practal.domain.controller.ChallengeViewModel
 import com.itismob.s15.group7.practal.domain.controller.PostViewModel
 import com.itismob.s15.group7.practal.domain.controller.UserViewModel
 import com.itismob.s15.group7.practal.domain.controller.PracticeSessionViewModel
+import com.itismob.s15.group7.practal.domain.controller.ClubViewModel
 import com.itismob.s15.group7.practal.ui.screens.AchievementsScreen
 import com.itismob.s15.group7.practal.ui.screens.ChallengeDetailScreen
 import com.itismob.s15.group7.practal.ui.screens.ChallengeScreen
@@ -68,6 +69,7 @@ fun PractalApp() {
     val postViewModel: PostViewModel = viewModel()
     val practiceSessionViewModel: PracticeSessionViewModel = viewModel { PracticeSessionViewModel(userViewModel) }
     val achievementViewModel: com.itismob.s15.group7.practal.domain.controller.AchievementViewModel = viewModel()
+    val clubViewModel: ClubViewModel = viewModel()
     val email: String = ""
 
     NavHost(navController, startDestination = "landing") {
@@ -84,6 +86,7 @@ fun PractalApp() {
         composable("done") { CompletedProfileScreen(navController, userViewModel) }
 
         composable("dashboard") { DashboardScreen(navController, userViewModel, postViewModel, practiceSessionViewModel) }
+        composable("dashboard") { DashboardScreen(navController, userViewModel, postViewModel, practiceSessionViewModel, clubViewModel) }
 
         composable("analytics") { ProgressAnalyticsScreen(navController, userViewModel, practiceSessionViewModel) }
         composable("leaderboard") { LeaderboardScreen(
@@ -91,6 +94,7 @@ fun PractalApp() {
             viewModel = TODO()
         ) }
         composable("clubs") { ClubsScreen(navController) }
+        composable("clubs") { ClubsScreen(navController, clubViewModel, userViewModel) }
 
         composable("challenges") { ChallengeScreen(navController, userViewModel, challengeViewModel) }
         composable("challenge_detail/{challenge_id}") { backStackEntry ->

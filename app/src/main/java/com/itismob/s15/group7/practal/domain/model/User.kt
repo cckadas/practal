@@ -27,6 +27,8 @@ data class User(
 
     val followers: List<String> = emptyList(),
     val following: List<String> = emptyList(),
+    
+    val clubs: List<String> = emptyList(), // clubs user has joined
 
     val challenges: Map<String, Int> = emptyMap(),
 
