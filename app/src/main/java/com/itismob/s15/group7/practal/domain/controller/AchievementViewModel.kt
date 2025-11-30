@@ -109,7 +109,7 @@ class AchievementViewModel : ViewModel() {
     
     private suspend fun checkSpecialAchievements(user: User) {
         try {
-            val sessions = db.collection("practiceSessions")
+            val sessions = db.collection("practice_sessions")
                 .whereEqualTo("userId", user.id)
                 .get()
                 .await()
