@@ -22,6 +22,7 @@ import androidx.navigation.NavHostController
 import com.itismob.s15.group7.practal.*
 import com.itismob.s15.group7.practal.domain.controller.*
 import com.itismob.s15.group7.practal.domain.controller.AchievementViewModel
+import com.itismob.s15.group7.practal.domain.model.computeLevel
 import com.itismob.s15.group7.practal.ui.theme.Poppins
 import kotlinx.coroutines.*
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -56,6 +57,7 @@ fun LogPracticeSessionScreen(
     var difficulty by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
     var showSuccessDialog by remember { mutableStateOf(false) }
+    var showLoadingDialog by remember { mutableStateOf(false) }
     var earnedXP by remember { mutableIntStateOf(0) }
     var sessionDurationSeconds by remember { mutableIntStateOf(0) }
     
@@ -100,15 +102,21 @@ fun LogPracticeSessionScreen(
                 }
                 
                 practiceSessionViewModel.endPracticeSession(notes, difficulty)
+                showLoadingDialog = true
                 GlobalScope.launch {
-                    delay(1500)
+                    // Wait for Firebase to save the session
+                    delay(2000)
+                    // Refresh user data to get updated XP and level
                     userViewModel.getUserList()
+                    // Wait for user data to update in state
+                    delay(1000)
                     
-                    // check and unlock achievements after session
+                    // check and unlock achievements after session with fresh user data
                     loggedInUser?.let { user ->
                         achievementViewModel.checkAndUnlockAchievements(user)
                     }
                     
+                    showLoadingDialog = false
                     showSuccessDialog = true
                 }
             },
@@ -116,18 +124,51 @@ fun LogPracticeSessionScreen(
         )
     }
     
+    if (showLoadingDialog) {
+        LoadingDialog()
+    }
+    
     if (showSuccessDialog) {
+        val totalXP = loggedInUser?.xp ?: 0
+        val levelInfo = computeLevel(totalXP)
         SessionCompleteDialog(
             earnedXP = earnedXP,
             durationSeconds = sessionDurationSeconds,
-            currentLevel = loggedInUser?.level ?: 1,
-            totalXP = loggedInUser?.xp ?: 0,
+            currentLevel = levelInfo.level,
+            totalXP = totalXP,
             onDismiss = {
                 showSuccessDialog = false
                 navController.popBackStack()
             }
         )
     }
+}
+
+@Composable
+private fun LoadingDialog() {
+    AlertDialog(
+        onDismissRequest = { },
+        title = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("⏳", fontSize = 48.sp)
+                Spacer(Modifier.height(8.dp))
+                Text("Saving Session...", fontFamily = Poppins, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+            }
+        },
+        text = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                CircularProgressIndicator(color = DarkGreen, modifier = Modifier.size(48.dp))
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    "Updating your progress",
+                    fontFamily = Poppins, fontSize = 14.sp, color = Color.Gray, textAlign = TextAlign.Center
+                )
+            }
+        },
+        confirmButton = { },
+        containerColor = WhiteBox,
+        shape = RoundedCornerShape(20.dp)
+    )
 }
 
 @Composable
@@ -138,10 +179,8 @@ private fun SessionCompleteDialog(
     totalXP: Int,
     onDismiss: () -> Unit
 ) {
-    val xpForNextLevel = 100 + (currentLevel - 1) * 50
-    val xpForCurrentLevel = (1 until currentLevel).sumOf { 100 + (it - 1) * 50 }
-    val xpInCurrentLevel = totalXP - xpForCurrentLevel
-    val progress = (xpInCurrentLevel.toFloat() / xpForNextLevel).coerceIn(0f, 1f)
+    val levelInfo = computeLevel(totalXP)
+    val progress = (levelInfo.currentXP.toFloat() / levelInfo.xpToNextLevel).coerceIn(0f, 1f)
     
     val animatedProgress = remember { Animatable(0f) }
     LaunchedEffect(Unit) {
@@ -170,10 +209,10 @@ private fun SessionCompleteDialog(
                     Text("+$earnedXP XP", fontFamily = Poppins, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = DarkGreen)
                 }
                 Spacer(Modifier.height(20.dp))
-                LevelProgressBar(currentLevel, xpInCurrentLevel, xpForNextLevel, animatedProgress.value)
+                LevelProgressBar(levelInfo.level, levelInfo.currentXP, levelInfo.xpToNextLevel, animatedProgress.value)
                 Spacer(Modifier.height(12.dp))
                 Text(
-                    "Keep practicing to reach Level ${currentLevel + 1}!",
+                    "Keep practicing to reach Level ${levelInfo.level + 1}!",
                     fontFamily = Poppins, fontSize = 12.sp, color = Color.Gray, textAlign = TextAlign.Center
                 )
             }

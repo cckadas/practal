@@ -7,6 +7,7 @@ import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.itismob.s15.group7.practal.domain.model.PracticeSession
+import com.itismob.s15.group7.practal.domain.model.computeLevel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -150,8 +151,25 @@ class PracticeSessionViewModel(private val userViewModel: UserViewModel) : ViewM
                 val currentLevel = userDoc.getLong("level")?.toInt() ?: 1
                 val newXP = currentXP + earnedXP
                 
-                // Calculate new level
-                val newLevel = calculateLevel(newXP)
+                // Get detailed level information
+                val currentLevelInfo = computeLevel(currentXP)
+                val newLevelInfo = computeLevel(newXP)
+                val newLevel = newLevelInfo.level
+                
+                // Log detailed XP progress
+                Log.d("PracticeSession", "━━━━━━━━━━ XP PROGRESS ━━━━━━━━━━")
+                Log.d("PracticeSession", "Current Level: ${currentLevelInfo.level} (${currentLevelInfo.title})")
+                Log.d("PracticeSession", "Current XP in Level: ${currentLevelInfo.currentXP} / ${currentLevelInfo.xpToNextLevel}")
+                Log.d("PracticeSession", "XP Earned: +$earnedXP XP")
+                Log.d("PracticeSession", "New Total XP: $currentXP → $newXP")
+                Log.d("PracticeSession", "New Level: ${newLevelInfo.level} (${newLevelInfo.title})")
+                Log.d("PracticeSession", "New XP in Level: ${newLevelInfo.currentXP} / ${newLevelInfo.xpToNextLevel}")
+                if (newLevel > currentLevel) {
+                    Log.d("PracticeSession", "🎉 LEVEL UP! ${currentLevelInfo.level} → ${newLevelInfo.level}")
+                } else {
+                    Log.d("PracticeSession", "Progress: ${newLevelInfo.currentXP - currentLevelInfo.currentXP} XP added to current level")
+                }
+                Log.d("PracticeSession", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
                 
                 // Calculate sessions this week and month
                 val allSessions = db.collection("practice_sessions")
@@ -220,26 +238,8 @@ class PracticeSessionViewModel(private val userViewModel: UserViewModel) : ViewM
         return (baseXP * multiplier).toInt()
     }
     
-    /**
-     * Calculate level based on total XP
-     * Level 1 to 2: 100 XP
-     * Level 2 to 3: 150 XP (total 250)
-     * Level 3 to 4: 200 XP (total 450)
-     * Formula: XP required for next level = 100 + (currentLevel - 1) * 50
-     */
-    private fun calculateLevel(totalXP: Int): Int {
-        var level = 1
-        var xpForNextLevel = 100
-        var accumulatedXP = 0
-        
-        while (totalXP >= accumulatedXP + xpForNextLevel) {
-            accumulatedXP += xpForNextLevel
-            level++
-            xpForNextLevel = 100 + (level - 1) * 50
-        }
-        
-        return level
-    }
+    // Note: Level calculation is handled by the centralized computeLevel() function
+    // from domain.model.LevelSystem.kt
 
     fun loadUserPracticeSessions() {
         val userId = userViewModel.loggedInUser.value?.email

@@ -37,6 +37,8 @@ import com.itismob.s15.group7.practal.domain.controller.UserViewModel
 import com.itismob.s15.group7.practal.domain.model.User
 import com.itismob.s15.group7.practal.domain.model.Achievement
 import com.itismob.s15.group7.practal.domain.model.UserAchievement
+import com.itismob.s15.group7.practal.domain.model.UserLevel
+import com.itismob.s15.group7.practal.domain.model.computeLevel
 import com.itismob.s15.group7.practal.ui.theme.Poppins
 import java.text.SimpleDateFormat
 import java.util.*
@@ -61,6 +63,20 @@ fun OtherProfileScreen(
     LaunchedEffect(userId) {
         if (userId.isNotEmpty()) {
             achievementViewModel.loadUserAchievements(userId)
+        }
+    }
+    
+    // Log level info whenever visited user's XP changes
+    LaunchedEffect(visitedUser?.xp) {
+        visitedUser?.let { user ->
+            val levelInfo = computeLevel(user.xp)
+            android.util.Log.d("OtherProfileScreen", "USER LEVEL INFO---------------------")
+            android.util.Log.d("OtherProfileScreen", "Viewing User: ${user.email}")
+            android.util.Log.d("OtherProfileScreen", "Total XP: ${user.xp}")
+            android.util.Log.d("OtherProfileScreen", "Current Level: ${levelInfo.level} (${levelInfo.title})")
+            android.util.Log.d("OtherProfileScreen", "XP in Current Level: ${levelInfo.currentXP} / ${levelInfo.xpToNextLevel}")
+            android.util.Log.d("OtherProfileScreen", "XP to Next Level: ${levelInfo.xpToNextLevel - levelInfo.currentXP}")
+            android.util.Log.d("OtherProfileScreen", "------------------------------------")
         }
     }
     
@@ -146,7 +162,6 @@ fun OtherProfileScreen(
 
 
             item {
-                OtherProfileRecentAchievements(visitedUser, navController, allAchievements, userAchievements)
                 OtherProfileRecentAchievements(visitedUser, navController, achievementViewModel, userAchievements)
                 Spacer(modifier = Modifier.height(24.dp))
             }
@@ -422,7 +437,6 @@ fun OtherProfileInfoSection(visitedUser: User?, userViewModel: UserViewModel) {
 fun OtherProfileRecentAchievements(
     visitedUser: User?,
     navController: NavHostController,
-    achievements: List<Achievement>,
     achievementViewModel: AchievementViewModel,
     userAchievements: List<UserAchievement>
 ) {
@@ -432,7 +446,6 @@ fun OtherProfileRecentAchievements(
         .sortedByDescending { it.unlockedDate }
         .take(6)
         .mapNotNull { ua ->
-            achievements.find { it.id == ua.achievementId }?.let { achievement ->
             achievementViewModel.getAchievementById(ua.achievementId)?.let { achievement ->
                 Triple(achievement, ua, ua.unlockedDate?.toDate()?.let { dateFormat.format(it) } ?: "")
             }

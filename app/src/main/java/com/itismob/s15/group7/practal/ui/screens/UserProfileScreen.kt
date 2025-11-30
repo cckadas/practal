@@ -38,56 +38,12 @@ import com.itismob.s15.group7.practal.domain.controller.UserViewModel
 import com.itismob.s15.group7.practal.domain.controller.AchievementViewModel
 import com.itismob.s15.group7.practal.domain.model.Achievement
 import com.itismob.s15.group7.practal.domain.model.UserAchievement
+import com.itismob.s15.group7.practal.domain.model.UserLevel
+import com.itismob.s15.group7.practal.domain.model.computeLevel
 import com.itismob.s15.group7.practal.ui.theme.Poppins
 import androidx.lifecycle.viewmodel.compose.viewModel
 import java.text.SimpleDateFormat
 import java.util.Locale
-
-data class UserLevel(
-    val level: Int,
-    val title: String,
-    val currentXP: Int,
-    val xpToNextLevel: Int
-)
-
-fun computeLevel(xp: Int): UserLevel {
-    val xpThresholds = listOf(
-        0,      // Level 1
-        100,    // Level 2
-        250,    // Level 3
-        500,    // Level 4
-        1000,   // Level 5
-        1500,   // Level 6
-        2000    // Level 7
-    )
-
-    var level = 1
-    for (i in xpThresholds.indices) {
-        if (xp >= xpThresholds[i]) {
-            level = i + 1
-        } else break
-    }
-
-    val xpToNext =
-        if (level < xpThresholds.size)
-            xpThresholds[level] - xp
-        else
-            0
-
-    val title = when (level) {
-        1, 2 -> "Beginner"
-        3, 4 -> "Intermediate"
-        5, 6 -> "Advanced"
-        else -> "Master"
-    }
-
-    return UserLevel(
-        level = level,
-        title = title,
-        currentXP = xp,
-        xpToNextLevel = xpToNext
-    )
-}
 
 
 
@@ -104,15 +60,31 @@ fun UserProfileScreen(
     
     val userId = loggedInUser?.id ?: ""
     
-    // reload achievements every time screen is opened
+    // reload achievements and user data every time screen is opened
     LaunchedEffect(Unit) {
         android.util.Log.d("UserProfileScreen", "Screen opened - userId: $userId")
+        // refresh user data to get latest XP and level
+        userViewModel.getUserList()
+        
         if (userId.isNotEmpty()) {
-            loggedInUser?.let { user ->
-                android.util.Log.d("UserProfileScreen", "Checking achievements for user: ${user.email}")
-                achievementViewModel.checkAndUnlockAchievements(user)
-            }
             achievementViewModel.loadUserAchievements(userId)
+        }
+    }
+    
+    // log level info whenever user XP changes
+    LaunchedEffect(loggedInUser?.xp) {
+        loggedInUser?.let { user ->
+            val levelInfo = computeLevel(user.xp)
+            android.util.Log.d("UserProfileScreen", "━━━━━━━━━━ USER LEVEL INFO ━━━━━━━━━━")
+            android.util.Log.d("UserProfileScreen", "User: ${user.email}")
+            android.util.Log.d("UserProfileScreen", "Total XP: ${user.xp}")
+            android.util.Log.d("UserProfileScreen", "Current Level: ${levelInfo.level} (${levelInfo.title})")
+            android.util.Log.d("UserProfileScreen", "XP in Current Level: ${levelInfo.currentXP} / ${levelInfo.xpToNextLevel}")
+            android.util.Log.d("UserProfileScreen", "XP to Next Level: ${levelInfo.xpToNextLevel - levelInfo.currentXP}")
+            android.util.Log.d("UserProfileScreen", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+            
+            android.util.Log.d("UserProfileScreen", "Checking achievements for user: ${user.email}")
+            achievementViewModel.checkAndUnlockAchievements(user)
         }
     }
     
@@ -122,7 +94,6 @@ fun UserProfileScreen(
         }
     }
     
-    val unlockedAchievements = userAchievements.filter { it.completed }
     val unlockedAchievements = achievementViewModel.getUnlockedAchievements(userId)
     
     LaunchedEffect(allAchievements.size, userAchievements.size, unlockedAchievements.size) {
@@ -215,7 +186,6 @@ fun UserProfileScreen(
             }
 
             item {
-                ProfileRecentAchievements(navController, allAchievements, userAchievements)
                 ProfileRecentAchievements(navController, achievementViewModel, userAchievements)
                 Spacer(modifier = Modifier.height(24.dp))
             }
@@ -514,7 +484,6 @@ fun ProfileInfoChip(text: String) {
 @Composable
 fun ProfileRecentAchievements(
     navController: NavHostController,
-    allAchievements: List<com.itismob.s15.group7.practal.domain.model.Achievement>,
     achievementViewModel: AchievementViewModel,
     userAchievements: List<com.itismob.s15.group7.practal.domain.model.UserAchievement>
 ) {
@@ -524,7 +493,6 @@ fun ProfileRecentAchievements(
         .sortedByDescending { it.unlockedDate }
         .take(6)
         .mapNotNull { ua ->
-            allAchievements.find { it.id == ua.achievementId }?.let { achievement ->
             achievementViewModel.getAchievementById(ua.achievementId)?.let { achievement ->
                 Triple(achievement, ua, ua.unlockedDate?.toDate()?.let { dateFormat.format(it) } ?: "")
             }
