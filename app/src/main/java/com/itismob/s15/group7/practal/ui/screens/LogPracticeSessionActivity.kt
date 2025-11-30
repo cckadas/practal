@@ -1,7 +1,9 @@
 package com.itismob.s15.group7.practal.ui.screens
 
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.animation.core.*
+import androidx.compose.ui.geometry.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -9,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material3.*
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -18,16 +21,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.itismob.s15.group7.practal.*
 import com.itismob.s15.group7.practal.domain.controller.*
-import com.itismob.s15.group7.practal.domain.controller.AchievementViewModel
 import com.itismob.s15.group7.practal.domain.model.computeLevel
 import com.itismob.s15.group7.practal.ui.theme.Poppins
 import kotlinx.coroutines.*
-import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Size
 
 // constants
 private val INSTRUMENTS = listOf(
@@ -50,80 +50,111 @@ fun LogPracticeSessionScreen(
     userViewModel: UserViewModel,
     achievementViewModel: AchievementViewModel = viewModel()
 ) {
+    // step management
     var currentStep by remember { mutableIntStateOf(1) }
+    
+    // session details from step 1
     var instrument by remember { mutableStateOf("") }
     var practiceType by remember { mutableStateOf("") }
     var practiceFocus by remember { mutableStateOf("") }
+    
+    // session details from step 3
     var difficulty by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
+    
+    // duration tracking
+    var frozenDurationSeconds by remember { mutableIntStateOf(0) }
+    
+    // xp and rewards
+    var earnedXP by remember { mutableIntStateOf(0) }
+    
+    // dialog states
     var showSuccessDialog by remember { mutableStateOf(false) }
     var showLoadingDialog by remember { mutableStateOf(false) }
-    var earnedXP by remember { mutableIntStateOf(0) }
-    var sessionDurationSeconds by remember { mutableIntStateOf(0) }
     
-    val currentSession by practiceSessionViewModel.currentSession.collectAsState()
     val loggedInUser by userViewModel.loggedInUser.collectAsState()
-    
+
     when (currentStep) {
         1 -> Step1_SessionDetails(
-            instrument, practiceType, practiceFocus,
-            { instrument = it }, { practiceType = it }, { practiceFocus = it },
+            instrument = instrument,
+            practiceType = practiceType,
+            practiceFocus = practiceFocus,
+            onInstrumentChange = { instrument = it },
+            onPracticeTypeChange = { practiceType = it },
+            onPracticeFocusChange = { practiceFocus = it },
             onNext = {
-                practiceSessionViewModel.startPracticeSession(
-                    instrument.replace(Regex("[🎹🎸🎻🪈🎷🎺🥁🎤🪕]"), "").trim(),
-                    practiceType, practiceFocus
-                )
+                Log.d("LogPracticeSession", "Step 1 → 2: $instrument, $practiceType, $practiceFocus")
+                val cleanInstrument = instrument.replace(Regex("[🎹🎸🎻🪈🎷🎺🥁🎤🪕]"), "").trim()
+                practiceSessionViewModel.startPracticeSession(cleanInstrument, practiceType, practiceFocus)
                 currentStep = 2
             },
             onBack = { navController.popBackStack() }
         )
+        
         2 -> Step2_LiveTimer(
-            practiceSessionViewModel,
-            onEnd = { currentStep = 3 },
-            onBack = { currentStep = 1 }
+            practiceSessionViewModel = practiceSessionViewModel,
+            frozenDurationSeconds = if (frozenDurationSeconds > 0) frozenDurationSeconds else null,
+            onEnd = { duration ->
+                frozenDurationSeconds = duration
+                Log.d("LogPracticeSession", "Step 2 → 3: Duration frozen at ${practiceSessionViewModel.formatDuration(duration)}")
+                currentStep = 3
+            },
+            onBack = {
+                Log.d("LogPracticeSession", "Step 2 → 1: Back")
+                currentStep = 1
+            }
         )
+        
         3 -> Step3_CompleteSession(
-            difficulty, notes,
-            { difficulty = it }, { notes = it },
-            practiceSessionViewModel,
+            instrument = instrument,
+            practiceType = practiceType,
+            practiceFocus = practiceFocus,
+            frozenDurationSeconds = frozenDurationSeconds,
+            difficulty = difficulty,
+            notes = notes,
+            onDifficultyChange = { difficulty = it },
+            onNotesChange = { notes = it },
+            practiceSessionViewModel = practiceSessionViewModel,
             onComplete = {
-                currentSession?.let { session ->
-                    val endTime = com.google.firebase.Timestamp.now()
-                    sessionDurationSeconds = (endTime.seconds - session.startTime.seconds).toInt()
-                    val durationMinutes = sessionDurationSeconds / 60
-                    val multiplier = when (difficulty.lowercase()) {
-                        "beginner" -> 1.0
-                        "intermediate" -> 1.5
-                        "advanced" -> 2.0
-                        "expert" -> 2.5
-                        else -> 1.0
-                    }
-                    earnedXP = (durationMinutes * multiplier).toInt()
-                }
+                Log.d("LogPracticeSession", "Step 3: Completing - Difficulty: $difficulty")
                 
-                practiceSessionViewModel.endPracticeSession(notes, difficulty)
+                // calculate xp
+                val durationMinutes = frozenDurationSeconds / 60
+                val multiplier = practiceSessionViewModel.getDifficultyMultiplier(difficulty)
+                earnedXP = (durationMinutes * multiplier).toInt()
+                
+                Log.d("LogPracticeSession", "XP: ${durationMinutes}min × ${multiplier}x = $earnedXP XP")
+                
+                // save session with frozen duration
+                practiceSessionViewModel.endPracticeSession(notes, difficulty, frozenDurationSeconds)
                 showLoadingDialog = true
+                
+                // handle post-save operations
                 GlobalScope.launch {
-                    // Wait for Firebase to save the session
-                    delay(2000)
-                    // Refresh user data to get updated XP and level
-                    userViewModel.getUserList()
-                    // Wait for user data to update in state
-                    delay(1000)
+                    delay(2000) // wait for firebase save
+                    userViewModel.getUserList() // refresh user data
+                    delay(1000) // wait for state update
                     
-                    // check and unlock achievements after session with fresh user data
-                    loggedInUser?.let { user ->
-                        achievementViewModel.checkAndUnlockAchievements(user)
-                    }
+                    // check achievements with updated user data
+                    loggedInUser?.let { achievementViewModel.checkAndUnlockAchievements(it) }
                     
                     showLoadingDialog = false
                     showSuccessDialog = true
+                    Log.d("LogPracticeSession", "Session complete: $earnedXP XP, ${practiceSessionViewModel.formatDuration(frozenDurationSeconds)}")
                 }
             },
-            onBack = { currentStep = 2 }
+            onBack = {
+                Log.d("LogPracticeSession", "Step 3 → 2: Back")
+                currentStep = 2
+            }
         )
     }
     
+    if (showLoadingDialog) {
+        LoadingDialog()
+    }
+    
+    // dialogs
     if (showLoadingDialog) {
         LoadingDialog()
     }
@@ -133,7 +164,7 @@ fun LogPracticeSessionScreen(
         val levelInfo = computeLevel(totalXP)
         SessionCompleteDialog(
             earnedXP = earnedXP,
-            durationSeconds = sessionDurationSeconds,
+            durationSeconds = frozenDurationSeconds,
             currentLevel = levelInfo.level,
             totalXP = totalXP,
             onDismiss = {
@@ -149,7 +180,10 @@ private fun LoadingDialog() {
     AlertDialog(
         onDismissRequest = { },
         title = {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 Text("⏳", fontSize = 48.sp)
                 Spacer(Modifier.height(8.dp))
                 Text("Saving Session...", fontFamily = Poppins, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
@@ -179,18 +213,39 @@ private fun SessionCompleteDialog(
     totalXP: Int,
     onDismiss: () -> Unit
 ) {
-    val levelInfo = computeLevel(totalXP)
-    val progress = (levelInfo.currentXP.toFloat() / levelInfo.xpToNextLevel).coerceIn(0f, 1f)
+    // calculate start and end xp
+    val startXP = totalXP - earnedXP
+    val endXP = totalXP
     
-    val animatedProgress = remember { Animatable(0f) }
+    val startLevelInfo = computeLevel(startXP)
+    val endLevelInfo = computeLevel(endXP)
+    
+    val startProgress = (startLevelInfo.currentXP.toFloat() / startLevelInfo.xpToNextLevel).coerceIn(0f, 1f)
+    val endProgress = (endLevelInfo.currentXP.toFloat() / endLevelInfo.xpToNextLevel).coerceIn(0f, 1f)
+    
+    // animate progress bar
+    val animatedProgress = remember { Animatable(startProgress) }
+    
+    // animate xp value
+    val animatedXP = remember { Animatable(startLevelInfo.currentXP.toFloat()) }
+    
     LaunchedEffect(Unit) {
-        animatedProgress.animateTo(progress, tween(1500, easing = FastOutSlowInEasing))
+        // animate both progress and xp value together
+        launch {
+            animatedProgress.animateTo(endProgress, tween(1500, easing = FastOutSlowInEasing))
+        }
+        launch {
+            animatedXP.animateTo(endLevelInfo.currentXP.toFloat(), tween(1000, easing = FastOutSlowInEasing))
+        }
     }
     
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 Text("🎉", fontSize = 48.sp)
                 Spacer(Modifier.height(8.dp))
                 Text("Session Complete!", fontFamily = Poppins, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
@@ -203,16 +258,25 @@ private fun SessionCompleteDialog(
                     fontFamily = Poppins, fontSize = 16.sp, fontWeight = FontWeight.Medium
                 )
                 Spacer(Modifier.height(16.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     Text("⭐", fontSize = 24.sp)
                     Spacer(Modifier.width(8.dp))
                     Text("+$earnedXP XP", fontFamily = Poppins, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = DarkGreen)
                 }
                 Spacer(Modifier.height(20.dp))
-                LevelProgressBar(levelInfo.level, levelInfo.currentXP, levelInfo.xpToNextLevel, animatedProgress.value)
+                LevelProgressBar(
+                    level = endLevelInfo.level,
+                    currentXP = animatedXP.value.toInt(),
+                    targetXP = endLevelInfo.xpToNextLevel,
+                    progress = animatedProgress.value
+                )
                 Spacer(Modifier.height(12.dp))
                 Text(
-                    "Keep practicing to reach Level ${levelInfo.level + 1}!",
+                    "Keep practicing to reach Level ${endLevelInfo.level + 1}!",
                     fontFamily = Poppins, fontSize = 12.sp, color = Color.Gray, textAlign = TextAlign.Center
                 )
             }
@@ -304,21 +368,62 @@ fun Step1_SessionDetails(
 @Composable
 fun Step2_LiveTimer(
     practiceSessionViewModel: PracticeSessionViewModel,
-    onEnd: () -> Unit,
+    frozenDurationSeconds: Int?,
+    onEnd: (Int) -> Unit,
     onBack: () -> Unit
 ) {
     val currentSession by practiceSessionViewModel.currentSession.collectAsState()
-    var elapsedSeconds by remember { mutableIntStateOf(0) }
     
-    LaunchedEffect(currentSession) {
-        if (currentSession != null) {
-            while (currentSession != null) {
-                val startTime = currentSession?.startTime?.toDate()?.time ?: 0L
-                elapsedSeconds = ((System.currentTimeMillis() - startTime) / 1000).toInt()
-                delay(1000)
-            }
+    // timer state
+    var pausedElapsedSeconds by remember { mutableIntStateOf(0) }
+    var isTimerRunning by remember { mutableStateOf(true) }
+    var currentTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    var timeOffset by remember { mutableLongStateOf(0L) }
+    
+    // calculate elapsed time: base (frozen) + additional time in this step
+    val elapsedSeconds = if (isTimerRunning && currentSession != null) {
+        val baseSeconds = frozenDurationSeconds ?: 0
+        val additionalSeconds = ((currentTime - timeOffset) / 1000).toInt()
+        baseSeconds + additionalSeconds
+    } else {
+        pausedElapsedSeconds
+    }
+    
+    // initialize timer on mount
+    LaunchedEffect(Unit) {
+        timeOffset = System.currentTimeMillis()
+        isTimerRunning = true
+        val message = if (frozenDurationSeconds != null) {
+            "Resuming from ${practiceSessionViewModel.formatDuration(frozenDurationSeconds)}"
         } else {
-            elapsedSeconds = 0
+            "Starting fresh timer"
+        }
+        Log.d("LogPracticeSession", "Step 2: $message")
+    }
+    
+    // timer tick loop
+    LaunchedEffect(currentSession, isTimerRunning) {
+        if (currentSession != null && isTimerRunning) {
+            while (isTimerRunning) {
+                delay(1000)
+                currentTime = System.currentTimeMillis()
+            }
+        }
+    }
+    
+    // stop timer when leaving
+    DisposableEffect(Unit) {
+        onDispose {
+            val finalElapsed = if (currentSession != null) {
+                val baseSeconds = frozenDurationSeconds ?: 0
+                val additionalSeconds = ((System.currentTimeMillis() - timeOffset) / 1000).toInt()
+                baseSeconds + additionalSeconds
+            } else {
+                pausedElapsedSeconds
+            }
+            pausedElapsedSeconds = finalElapsed
+            isTimerRunning = false
+            Log.d("LogPracticeSession", "Step 2: Stopped at ${practiceSessionViewModel.formatDuration(finalElapsed)}")
         }
     }
     
@@ -364,7 +469,12 @@ fun Step2_LiveTimer(
                     Spacer(Modifier.height(32.dp))
                     if (isActive) {
                         Button(
-                            onClick = onEnd,
+                            onClick = {
+                                // always capture current elapsed time
+                                pausedElapsedSeconds = elapsedSeconds
+                                isTimerRunning = false
+                                onEnd(elapsedSeconds)
+                            },
                             modifier = Modifier.fillMaxWidth().height(56.dp),
                             shape = RoundedCornerShape(14.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = DarkGreen)
@@ -394,6 +504,8 @@ fun Step2_LiveTimer(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Step3_CompleteSession(
+    instrument: String, practiceType: String, practiceFocus: String,
+    frozenDurationSeconds: Int,
     difficulty: String, notes: String,
     onDifficultyChange: (String) -> Unit, onNotesChange: (String) -> Unit,
     practiceSessionViewModel: PracticeSessionViewModel,
@@ -402,12 +514,42 @@ fun Step3_CompleteSession(
     val isLoading by practiceSessionViewModel.isLoading.collectAsState()
     var difficultyExpanded by remember { mutableStateOf(false) }
     
+    // use the frozen duration from when end session was pressed
+    val hours = frozenDurationSeconds / 3600
+    val minutes = (frozenDurationSeconds % 3600) / 60
+    val seconds = frozenDurationSeconds % 60
+    
     Column(Modifier.fillMaxSize().background(WhiteBox)) {
         StepHeader("Step 3 of 3: Session Details", onBack)
         Column(
             Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(18.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
+            // Session Recap Card
+            Card(
+                colors = CardDefaults.cardColors(containerColor = LightGreen.copy(alpha = 0.15f)),
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, LightGreen.copy(alpha = 0.3f))
+            ) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.MusicNote, null, tint = DarkGreen, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Session Recap", fontFamily = Poppins, fontWeight = FontWeight.Bold, color = DarkGreen, fontSize = 16.sp)
+                    }
+                    HorizontalDivider(
+                        Modifier,
+                        DividerDefaults.Thickness,
+                        color = LightGreen.copy(alpha = 0.3f)
+                    )
+
+                    SessionRecapRow("Instrument", instrument)
+                    SessionRecapRow("Practice Type", practiceType)
+                    SessionRecapRow("Focus", practiceFocus)
+                    SessionRecapRow("Duration", String.format("%02d:%02d:%02d", hours, minutes, seconds))
+                }
+            }
+            
             Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(16.dp)) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Difficulty", fontFamily = Poppins, fontWeight = FontWeight.SemiBold, color = DarkGreen)
@@ -437,6 +579,30 @@ fun Step3_CompleteSession(
                 else Text("Log Session", fontFamily = Poppins, fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
         }
+    }
+}
+
+@Composable
+private fun SessionRecapRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            fontFamily = Poppins,
+            fontWeight = FontWeight.Medium,
+            color = Color.Gray,
+            fontSize = 13.sp
+        )
+        Text(
+            text = value,
+            fontFamily = Poppins,
+            fontWeight = FontWeight.SemiBold,
+            color = DarkGreen,
+            fontSize = 14.sp
+        )
     }
 }
 
