@@ -85,30 +85,28 @@ class ClubViewModel : ViewModel() {
                 clubId = clubId,
                 joinedDate = Timestamp.now()
             )
-            
-            // add to userClubs collection
-            firestore.collection("userClubs")
-                .document("${userId}_${clubId}")
-                .set(userClub)
-                .await()
-            
-            // increment member count
+
             val clubRef = firestore.collection("clubs").document(clubId)
+            val userRef = firestore.collection("users").document(userId)
+            val userClubRef = firestore.collection("userClubs").document("${userId}_${clubId}")
+
             firestore.runTransaction { transaction ->
-                val club = transaction.get(clubRef).toObject(Club::class.java)
+                // Add to userClubs collection
+                transaction.set(userClubRef, userClub)
+
+                // Increment member count
+                val clubSnapshot = transaction.get(clubRef)
+                val club = clubSnapshot.toObject(Club::class.java)
                 club?.let {
                     transaction.update(clubRef, "memberCount", it.memberCount + 1)
                 }
-            }.await()
-            
-            // update user's clubs
-            val userRef = firestore.collection("users").document(userId)
-            firestore.runTransaction { transaction ->
-                val currentClubs = transaction.get(userRef).get("clubs") as? List<*> ?: emptyList<String>()
+
+                // Update user's clubs
+                val userSnapshot = transaction.get(userRef)
+                val currentClubs = userSnapshot.get("clubs") as? List<*> ?: emptyList<String>()
                 val updatedClubs = (currentClubs + clubId).distinct()
                 transaction.update(userRef, "clubs", updatedClubs)
             }.await()
-            
             Log.d(TAG, "User $userId joined club $clubId")
             true
         } catch (e: Exception) {
