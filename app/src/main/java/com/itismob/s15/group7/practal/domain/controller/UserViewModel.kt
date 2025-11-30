@@ -7,10 +7,16 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.Firebase
 import com.google.firebase.firestore.firestore
+import com.itismob.s15.group7.practal.domain.model.PracticeSession
 import com.itismob.s15.group7.practal.domain.model.User
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 import kotlin.String
 
 class UserViewModel : ViewModel() {
@@ -26,8 +32,23 @@ class UserViewModel : ViewModel() {
 
     init {
         getUserList()
+        syncLoggedInUser()
+        syncUserStatsWithPracticeSessions()
     }
 
+    // automatically sync loggedInUser with userList updates
+    private fun syncLoggedInUser() {
+        viewModelScope.launch {
+            _userList.collect { users ->
+                _loggedInUser.value?.let { currentUser ->
+                    // update loggedInUser with fresh data from userList
+                    users.find { it.id == currentUser.id }?.let { updatedUser ->
+                        _loggedInUser.value = updatedUser
+                    }
+                }
+            }
+        }
+    }
 
     fun getUserList() {
         db.collection("users")
@@ -37,6 +58,53 @@ class UserViewModel : ViewModel() {
                     _userList.value = value.toObjects(User::class.java)
                 }
             }
+    }
+
+    // sync user stats with actual practice session data on initial load
+    private fun syncUserStatsWithPracticeSessions() {
+        viewModelScope.launch {
+            try {
+                Log.d("UserViewModel", "Starting initial sync of user stats with practice sessions...")
+                
+                val users = db.collection("users").get().await().toObjects(User::class.java)
+                
+                users.forEach { user ->
+                    if (user.email.isNotEmpty()) {
+                        recalculateUserStats(user.email)
+                    }
+                }
+                
+                Log.d("UserViewModel", "Completed initial sync for ${users.size} users")
+            } catch (e: Exception) {
+                Log.e("UserViewModel", "Error syncing user stats: ${e.message}", e)
+            }
+        }
+    }
+
+    private suspend fun recalculateUserStats(userEmail: String) {
+        try {
+            // fetch all practice sessions for user
+            val sessions = db.collection("practice_sessions")
+                .whereEqualTo("userId", userEmail)
+                .get()
+                .await()
+                .documents
+                .mapNotNull { it.toObject(PracticeSession::class.java) }
+            
+            if (sessions.isEmpty()) {
+                Log.d("UserViewModel", "No sessions found for $userEmail, skipping stats calculation")
+                return
+            }
+            
+            // calculate stats
+            val stats = UserStatsManager.calculateStatsFromSessions(userEmail, sessions, verbose = true)
+            
+            // update firebase on found differences
+            UserStatsManager.updateUserStatsIfChanged(db, userEmail, stats, verbose = true)
+            
+        } catch (e: Exception) {
+            Log.e("UserViewModel", "Error recalculating stats for $userEmail: ${e.message}", e)
+        }
     }
 
 

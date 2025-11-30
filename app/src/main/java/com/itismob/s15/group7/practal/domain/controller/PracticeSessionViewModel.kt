@@ -142,8 +142,6 @@ class PracticeSessionViewModel(private val userViewModel: UserViewModel) : ViewM
             
             if (userQuery.documents.isNotEmpty()) {
                 val userDoc = userQuery.documents[0]
-                val currentHours = userDoc.getDouble("totalPracticeHours") ?: 0.0
-                val newHours = currentHours + (session.durationMinutes / 60.0)
                 
                 // Calculate XP earned based on difficulty and duration
                 val earnedXP = calculateXP(session.durationMinutes, session.difficulty)
@@ -157,7 +155,7 @@ class PracticeSessionViewModel(private val userViewModel: UserViewModel) : ViewM
                 val newLevel = newLevelInfo.level
                 
                 // Log detailed XP progress
-                Log.d("PracticeSession", "━━━━━━━━━━ XP PROGRESS ━━━━━━━━━━")
+                Log.d("PracticeSession", "XP PROGRESS-------------------------")
                 Log.d("PracticeSession", "Current Level: ${currentLevelInfo.level} (${currentLevelInfo.title})")
                 Log.d("PracticeSession", "Current XP in Level: ${currentLevelInfo.currentXP} / ${currentLevelInfo.xpToNextLevel}")
                 Log.d("PracticeSession", "XP Earned: +$earnedXP XP")
@@ -169,9 +167,17 @@ class PracticeSessionViewModel(private val userViewModel: UserViewModel) : ViewM
                 } else {
                     Log.d("PracticeSession", "Progress: ${newLevelInfo.currentXP - currentLevelInfo.currentXP} XP added to current level")
                 }
-                Log.d("PracticeSession", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                Log.d("PracticeSession", "------------------------------------")
                 
-                // Calculate sessions this week and month
+                // Update XP and level first
+                db.collection("users").document(userDoc.id).update(
+                    mapOf(
+                        "xp" to newXP,
+                        "level" to newLevel
+                    )
+                ).await()
+                
+                // Fetch all sessions for this user to recalculate comprehensive stats
                 val allSessions = db.collection("practice_sessions")
                     .whereEqualTo("userId", userEmail)
                     .get()
@@ -179,39 +185,16 @@ class PracticeSessionViewModel(private val userViewModel: UserViewModel) : ViewM
                     .documents
                     .mapNotNull { it.toObject(PracticeSession::class.java) }
                 
-                val calendar = Calendar.getInstance()
-                val currentWeek = calendar.get(Calendar.WEEK_OF_YEAR)
-                val currentYear = calendar.get(Calendar.YEAR)
-                val currentMonth = calendar.get(Calendar.MONTH)
+                // Use centralized manager to calculate all stats (hours, streaks, weekly/monthly counts)
+                val stats = UserStatsManager.calculateStatsFromSessions(userEmail, allSessions, verbose = true)
                 
-                val sessionsThisWeek = allSessions.count { sess ->
-                    val sessionCal = Calendar.getInstance().apply { time = sess.startTime.toDate() }
-                    sessionCal.get(Calendar.WEEK_OF_YEAR) == currentWeek &&
-                    sessionCal.get(Calendar.YEAR) == currentYear
-                }
-                
-                val sessionsThisMonth = allSessions.count { sess ->
-                    val sessionCal = Calendar.getInstance().apply { time = sess.startTime.toDate() }
-                    sessionCal.get(Calendar.MONTH) == currentMonth &&
-                    sessionCal.get(Calendar.YEAR) == currentYear
-                }
-                
-                val updates = mutableMapOf<String, Any>(
-                    "totalPracticeHours" to newHours,
-                    "lastPracticeDate" to session.date,
-                    "practiceSessions" to com.google.firebase.firestore.FieldValue.arrayUnion(session.id),
-                    "xp" to newXP,
-                    "level" to newLevel,
-                    "sessionsThisWeek" to sessionsThisWeek,
-                    "sessionsThisMonth" to sessionsThisMonth
-                )
-
-                db.collection("users").document(userDoc.id).update(updates).await()
+                // Update Firebase with calculated stats
+                UserStatsManager.updateUserStatsIfChanged(db, userEmail, stats, verbose = true)
                 
                 if (newLevel > currentLevel) {
-                    Log.d("PracticeSession", "✓ LEVEL UP! ${currentLevel} → ${newLevel} | XP: ${currentXP} → ${newXP} (+${earnedXP}) | Week: $sessionsThisWeek, Month: $sessionsThisMonth")
+                    Log.d("PracticeSession", "✓ LEVEL UP! ${currentLevel} → ${newLevel} | XP: ${currentXP} → ${newXP} (+${earnedXP})")
                 } else {
-                    Log.d("PracticeSession", "✓ Updated user stats: ${currentHours}h → ${newHours}h | XP: ${currentXP} → ${newXP} (+${earnedXP}) | Week: $sessionsThisWeek, Month: $sessionsThisMonth")
+                    Log.d("PracticeSession", "✓ Updated user stats: XP: ${currentXP} → ${newXP} (+${earnedXP})")
                 }
             } else {
                 Log.e("PracticeSession", "✗ User document not found for email: $userEmail")
@@ -337,44 +320,10 @@ class PracticeSessionViewModel(private val userViewModel: UserViewModel) : ViewM
             val sessions = _practiceSessions.value
             if (sessions.isEmpty()) return
 
-            val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-            val uniqueDates = sessions.map { it.date }.distinct().sortedDescending()
+            // calculate streak
+            val streakResult = UserStatsManager.calculateStreaks(sessions, verbose = true)
             
-            var currentStreak = 0
-            var longestStreak = 0
-            var tempStreak = 1
-            
-            // Calculate current streak from today
-            val today = dateFormat.format(Date())
-            if (uniqueDates.contains(today)) {
-                currentStreak = 1
-                for (i in 1 until uniqueDates.size) {
-                    val prevDate = dateFormat.parse(uniqueDates[i - 1])
-                    val currDate = dateFormat.parse(uniqueDates[i])
-                    val diffDays = ((prevDate.time - currDate.time) / (1000 * 60 * 60 * 24)).toInt()
-                    if (diffDays == 1) {
-                        currentStreak++
-                    } else {
-                        break
-                    }
-                }
-            }
-            
-            // Calculate longest streak
-            longestStreak = currentStreak
-            for (i in 1 until uniqueDates.size) {
-                val prevDate = dateFormat.parse(uniqueDates[i - 1])
-                val currDate = dateFormat.parse(uniqueDates[i])
-                val diffDays = ((prevDate.time - currDate.time) / (1000 * 60 * 60 * 24)).toInt()
-                if (diffDays == 1) {
-                    tempStreak++
-                    if (tempStreak > longestStreak) longestStreak = tempStreak
-                } else {
-                    tempStreak = 1
-                }
-            }
-            
-            // Find user document by email and update streak info
+            // find user by email and update streak
             val userQuery = db.collection("users")
                 .whereEqualTo("email", userEmail)
                 .limit(1)
@@ -385,11 +334,11 @@ class PracticeSessionViewModel(private val userViewModel: UserViewModel) : ViewM
                 val userDocId = userQuery.documents[0].id
                 db.collection("users").document(userDocId).update(
                     mapOf(
-                        "currentStreak" to currentStreak,
-                        "longestStreak" to longestStreak
+                        "currentStreak" to streakResult.currentStreak,
+                        "longestStreak" to streakResult.longestStreak
                     )
                 ).await()
-                Log.d("PracticeSession", "✓ Updated streaks: current=$currentStreak, longest=$longestStreak")
+                Log.d("PracticeSession", "✓ Updated streaks: current=${streakResult.currentStreak}, longest=${streakResult.longestStreak}")
             } else {
                 Log.e("PracticeSession", "✗ User document not found for email: $userEmail")
             }
@@ -417,7 +366,7 @@ class PracticeSessionViewModel(private val userViewModel: UserViewModel) : ViewM
         val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
         val dateString = dateFormat.format(now.toDate())
 
-        // Calculate start time based on duration
+        // calculate start time based on duration
         val startTimeMillis = now.toDate().time - (durationMinutes * 60 * 1000)
         val startTime = Timestamp(Date(startTimeMillis))
 
