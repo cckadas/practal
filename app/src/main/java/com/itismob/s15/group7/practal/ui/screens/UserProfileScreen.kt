@@ -36,7 +36,12 @@ import com.itismob.s15.group7.practal.LightGreen
 import com.itismob.s15.group7.practal.WhiteBox
 import com.itismob.s15.group7.practal.domain.controller.UserViewModel
 import com.itismob.s15.group7.practal.domain.controller.AchievementViewModel
+import com.itismob.s15.group7.practal.domain.model.Achievement
+import com.itismob.s15.group7.practal.domain.model.UserAchievement
 import com.itismob.s15.group7.practal.ui.theme.Poppins
+import androidx.lifecycle.viewmodel.compose.viewModel
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 data class UserLevel(
     val level: Int,
@@ -117,48 +122,14 @@ fun UserProfileScreen(
         }
     }
     
-    val dateFormat = java.text.SimpleDateFormat("MMM dd, yyyy", java.util.Locale.getDefault())
+    val unlockedAchievements = userAchievements.filter { it.completed }
     
-    val achievements = allAchievements.map { achievement ->
-        val userAchievement = userAchievements.find { it.achievementId == achievement.id }
-        val isUnlocked = userAchievement?.completed ?: false
-        val progress = userAchievement?.progress ?: 0
-        val unlockedDate = if (isUnlocked) {
-            userAchievement?.unlockedDate?.toDate()?.let { dateFormat.format(it) }
-        } else null
-        
-        AchievementUI(
-            id = achievement.id,
-            title = achievement.title,
-            description = achievement.description,
-            icon = achievement.badgeIcon,
-            isUnlocked = isUnlocked,
-            progress = progress,
-            category = when (achievement.category) {
-                "practice" -> "Practice"
-                "challenge" -> "Challenge"
-                "social" -> "Social"
-                "technique" -> "Technique"
-                "special" -> "Special"
-                else -> "Practice"
-            },
-            unlockedDate = unlockedDate,
-            xpReward = achievement.xpReward
-        )
-    }
-    
-    val unlockedCount = achievements.count { it.isUnlocked }
-    
-    LaunchedEffect(allAchievements.size, userAchievements.size, unlockedCount) {
+    LaunchedEffect(allAchievements.size, userAchievements.size, unlockedAchievements.size) {
         android.util.Log.d("UserProfileScreen", "Total achievements: ${allAchievements.size}, User achievements: ${userAchievements.size}")
-        android.util.Log.d("UserProfileScreen", "Mapped achievements: ${achievements.size}, Unlocked: $unlockedCount")
+        android.util.Log.d("UserProfileScreen", "Unlocked: ${unlockedAchievements.size}")
         android.util.Log.d("UserProfileScreen", "UserAchievements details:")
         userAchievements.forEach { ua ->
             android.util.Log.d("UserProfileScreen", "  - achievementId: ${ua.achievementId}, completed: ${ua.completed}, progress: ${ua.progress}")
-        }
-        android.util.Log.d("UserProfileScreen", "Achievements mapped:")
-        achievements.filter { it.isUnlocked }.forEach { a ->
-            android.util.Log.d("UserProfileScreen", "  - Unlocked: ${a.title} (${a.id})")
         }
     }
 
@@ -243,7 +214,7 @@ fun UserProfileScreen(
             }
 
             item {
-                ProfileRecentAchievements(navController, achievements)
+                ProfileRecentAchievements(navController, allAchievements, userAchievements)
                 Spacer(modifier = Modifier.height(24.dp))
             }
         }
@@ -539,8 +510,21 @@ fun ProfileInfoChip(text: String) {
 
 
 @Composable
-fun ProfileRecentAchievements(navController: NavHostController, allAchievements: List<AchievementUI>) {
-    val recentAchievements = allAchievements.filter { it.isUnlocked }.take(6)
+fun ProfileRecentAchievements(
+    navController: NavHostController,
+    allAchievements: List<com.itismob.s15.group7.practal.domain.model.Achievement>,
+    userAchievements: List<com.itismob.s15.group7.practal.domain.model.UserAchievement>
+) {
+    val dateFormat = java.text.SimpleDateFormat("MMM dd, yyyy", java.util.Locale.getDefault())
+    val recentUnlocked = userAchievements
+        .filter { it.completed }
+        .sortedByDescending { it.unlockedDate }
+        .take(6)
+        .mapNotNull { ua ->
+            allAchievements.find { it.id == ua.achievementId }?.let { achievement ->
+                Triple(achievement, ua, ua.unlockedDate?.toDate()?.let { dateFormat.format(it) } ?: "")
+            }
+        }
     
     Card(
         modifier = Modifier
@@ -582,12 +566,18 @@ fun ProfileRecentAchievements(navController: NavHostController, allAchievements:
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(recentAchievements) { achievement ->
+                items(recentUnlocked) { (achievement, _, unlockedDate) ->
                     ProfileAchievementBadge(
-                        emoji = achievement.icon,
+                        emoji = achievement.badgeIcon,
                         title = achievement.title,
-                        unlockedDate = achievement.unlockedDate ?: "",
-                        accentColor = achievementCategoryColor(achievement.category)
+                        unlockedDate = unlockedDate,
+                        accentColor = achievementCategoryColor(when (achievement.category) {
+                            "practice" -> "Practice"
+                            "challenge" -> "Challenge"
+                            "social" -> "Social"
+                            "special" -> "Special"
+                            else -> "Practice"
+                        })
                     )
                 }
             }

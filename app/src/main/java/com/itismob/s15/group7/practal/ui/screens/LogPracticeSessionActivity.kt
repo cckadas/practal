@@ -24,6 +24,7 @@ import com.itismob.s15.group7.practal.domain.controller.*
 import com.itismob.s15.group7.practal.domain.controller.AchievementViewModel
 import com.itismob.s15.group7.practal.ui.theme.Poppins
 import kotlinx.coroutines.*
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Size
 

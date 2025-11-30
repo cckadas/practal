@@ -35,6 +35,8 @@ import com.itismob.s15.group7.practal.WhiteBox
 import com.itismob.s15.group7.practal.domain.controller.AchievementViewModel
 import com.itismob.s15.group7.practal.domain.controller.UserViewModel
 import com.itismob.s15.group7.practal.domain.model.User
+import com.itismob.s15.group7.practal.domain.model.Achievement
+import com.itismob.s15.group7.practal.domain.model.UserAchievement
 import com.itismob.s15.group7.practal.ui.theme.Poppins
 import java.text.SimpleDateFormat
 import java.util.*
@@ -62,35 +64,7 @@ fun OtherProfileScreen(
         }
     }
     
-    val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
-    
-    val achievements = allAchievements.map { achievement ->
-        val userAchievement = userAchievements.find { it.achievementId == achievement.id }
-        val isUnlocked = userAchievement?.completed ?: false
-        val progress = userAchievement?.progress ?: 0
-        val unlockedDate = if (isUnlocked && userAchievement != null) {
-            dateFormat.format(userAchievement.unlockedDate.toDate())
-        } else null
-        
-        AchievementUI(
-            id = achievement.id,
-            title = achievement.title,
-            description = achievement.description,
-            icon = achievement.badgeIcon,
-            isUnlocked = isUnlocked,
-            progress = progress,
-            category = when (achievement.category) {
-                "practice" -> "Practice"
-                "challenge" -> "Challenge"
-                "social" -> "Social"
-                "technique" -> "Technique"
-                "special" -> "Special"
-                else -> "Practice"
-            },
-            unlockedDate = unlockedDate,
-            xpReward = achievement.xpReward
-        )
-    }
+    val unlockedAchievements = userAchievements.filter { it.completed }
 
     Column(
         modifier = Modifier
@@ -172,7 +146,7 @@ fun OtherProfileScreen(
 
 
             item {
-                OtherProfileRecentAchievements(visitedUser, navController, achievements)
+                OtherProfileRecentAchievements(visitedUser, navController, allAchievements, userAchievements)
                 Spacer(modifier = Modifier.height(24.dp))
             }
         }
@@ -444,8 +418,22 @@ fun OtherProfileInfoSection(visitedUser: User?, userViewModel: UserViewModel) {
 
 
 @Composable
-fun OtherProfileRecentAchievements(visitedUser: User?, navController: NavHostController, allAchievements: List<AchievementUI>) {
-    val recentAchievements = allAchievements.filter { it.isUnlocked }.take(6)
+fun OtherProfileRecentAchievements(
+    visitedUser: User?,
+    navController: NavHostController,
+    achievements: List<Achievement>,
+    userAchievements: List<UserAchievement>
+) {
+    val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+    val recentUnlocked = userAchievements
+        .filter { it.completed }
+        .sortedByDescending { it.unlockedDate }
+        .take(6)
+        .mapNotNull { ua ->
+            achievements.find { it.id == ua.achievementId }?.let { achievement ->
+                Triple(achievement, ua, ua.unlockedDate?.toDate()?.let { dateFormat.format(it) } ?: "")
+            }
+        }
 
     Card(
         modifier = Modifier
@@ -480,12 +468,18 @@ fun OtherProfileRecentAchievements(visitedUser: User?, navController: NavHostCon
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(recentAchievements) { achievement ->
+                items(recentUnlocked) { (achievement, _, unlockedDate) ->
                     ProfileAchievementBadge(
-                        emoji = achievement.icon,
+                        emoji = achievement.badgeIcon,
                         title = achievement.title,
-                        unlockedDate = achievement.unlockedDate ?: "",
-                        accentColor = achievementCategoryColor(achievement.category)
+                        unlockedDate = unlockedDate,
+                        accentColor = achievementCategoryColor(when (achievement.category) {
+                            "practice" -> "Practice"
+                            "challenge" -> "Challenge"
+                            "social" -> "Social"
+                            "special" -> "Special"
+                            else -> "Practice"
+                        })
                     )
                 }
             }

@@ -32,21 +32,10 @@ import com.itismob.s15.group7.practal.WhiteBox
 import com.itismob.s15.group7.practal.domain.controller.AchievementViewModel
 import com.itismob.s15.group7.practal.domain.controller.UserViewModel
 import com.itismob.s15.group7.practal.domain.model.Achievement
+import com.itismob.s15.group7.practal.domain.model.UserAchievement
 import com.itismob.s15.group7.practal.ui.theme.Poppins
 import java.text.SimpleDateFormat
 import java.util.*
-
-data class AchievementUI(
-    val id: String,
-    val title: String,
-    val description: String,
-    val icon: String,
-    val isUnlocked: Boolean,
-    val progress: Int = 100,
-    val category: String,
-    val unlockedDate: String? = null,
-    val xpReward: Int = 0
-)
 
 @Composable
 fun AchievementsScreen(
@@ -55,7 +44,7 @@ fun AchievementsScreen(
     achievementViewModel: AchievementViewModel = viewModel()
 ) {
     val loggedInUser by userViewModel.loggedInUser.collectAsState()
-    val allAchievements by achievementViewModel.achievements.collectAsState()
+    val achievements by achievementViewModel.achievements.collectAsState()
     val userAchievements by achievementViewModel.userAchievements.collectAsState()
     val userId = loggedInUser?.id ?: ""
     
@@ -70,21 +59,20 @@ fun AchievementsScreen(
     LaunchedEffect(userId) {
         if (userId.isNotEmpty()) achievementViewModel.loadUserAchievements(userId)
     }
-    
-    val achievements = mapToAchievementUI(allAchievements, userAchievements)
     var selectedCategory by remember { mutableStateOf("All") }
     
     val filteredAchievements = if (selectedCategory == "All") achievements 
-        else achievements.filter { it.category == selectedCategory }
+        else achievements.filter { mapCategory(it.category) == selectedCategory }
     
-    val unlockedCount = achievements.count { it.isUnlocked }
+    val unlockedAchievements = userAchievements.filter { it.completed }
+    val unlockedCount = unlockedAchievements.size
+    val earnedXP = unlockedAchievements.mapNotNull { ua -> achievements.find { it.id == ua.achievementId }?.xpReward }.sum()
     val progressPercentage = if (achievements.isNotEmpty()) (unlockedCount * 100 / achievements.size) else 0
     
     // Debug logging
-    LaunchedEffect(allAchievements.size, userAchievements.size, unlockedCount) {
-        android.util.Log.d("AchievementsScreen", "Achievements: ${allAchievements.size}, User: ${userAchievements.size}, Unlocked: $unlockedCount")
+    LaunchedEffect(achievements.size, userAchievements.size, unlockedCount) {
+        android.util.Log.d("AchievementsScreen", "Achievements: ${achievements.size}, User: ${userAchievements.size}, Unlocked: $unlockedCount")
         userAchievements.forEach { android.util.Log.d("AchievementsScreen", "  - ${it.achievementId}: completed=${it.completed}, progress=${it.progress}") }
-        achievements.filter { it.isUnlocked }.forEach { android.util.Log.d("AchievementsScreen", "  - Unlocked: ${it.title}") }
     }
 
     Column(
@@ -179,7 +167,7 @@ fun AchievementsScreen(
                         ) {
                             AchievementMiniStat("🔓", unlockedCount.toString(), "Unlocked")
                             AchievementMiniStat("🔒", (achievements.size - unlockedCount).toString(), "Locked")
-                            AchievementMiniStat("⭐", achievements.filter { it.isUnlocked }.sumOf { it.xpReward }.toString(), "XP Earned")
+                            AchievementMiniStat("⭐", earnedXP.toString(), "XP Earned")
                         }
                     }
                 }
@@ -245,7 +233,12 @@ fun AchievementsScreen(
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         rowAchievements.forEach { achievement ->
-                            AchievementCard(achievement = achievement, modifier = Modifier.weight(1f))
+                            val userAchievement = userAchievements.find { it.achievementId == achievement.id }
+                            AchievementCard(
+                                achievement = achievement,
+                                userAchievement = userAchievement,
+                                modifier = Modifier.weight(1f)
+                            )
                         }
                         if (rowAchievements.size == 1) {
                             Spacer(modifier = Modifier.weight(1f))
@@ -260,28 +253,6 @@ fun AchievementsScreen(
     }
 }
 
-private fun mapToAchievementUI(
-    allAchievements: List<Achievement>,
-    userAchievements: List<com.itismob.s15.group7.practal.domain.model.UserAchievement>
-): List<AchievementUI> {
-    val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
-    return allAchievements.map { achievement ->
-        val userAchievement = userAchievements.find { it.achievementId == achievement.id }
-        val isUnlocked = userAchievement?.completed ?: false
-        AchievementUI(
-            id = achievement.id,
-            title = achievement.title,
-            description = achievement.description,
-            icon = achievement.badgeIcon,
-            isUnlocked = isUnlocked,
-            progress = userAchievement?.progress ?: 0,
-            category = mapCategory(achievement.category),
-            unlockedDate = if (isUnlocked) userAchievement?.unlockedDate?.toDate()?.let { dateFormat.format(it) } else null,
-            xpReward = achievement.xpReward
-        )
-    }
-}
-
 private fun mapCategory(category: String): String = when (category) {
     "practice" -> "Practice"
     "challenge" -> "Challenge"
@@ -291,9 +262,20 @@ private fun mapCategory(category: String): String = when (category) {
 }
 
 @Composable
-fun AchievementCard(achievement: AchievementUI, modifier: Modifier = Modifier) {
-    val cardColor = if (achievement.isUnlocked) {
-        achievementCategoryColor(achievement.category).copy(alpha = 0.1f)
+fun AchievementCard(
+    achievement: Achievement,
+    userAchievement: UserAchievement?,
+    modifier: Modifier = Modifier
+) {
+    val isUnlocked = userAchievement?.completed ?: false
+    val progress = userAchievement?.progress ?: 0
+    val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+    val unlockedDate = if (isUnlocked) {
+        userAchievement?.unlockedDate?.toDate()?.let { dateFormat.format(it) }
+    } else null
+    
+    val cardColor = if (isUnlocked) {
+        achievementCategoryColor(mapCategory(achievement.category)).copy(alpha = 0.1f)
     } else {
         Color.LightGray.copy(alpha = 0.1f)
     }
@@ -303,7 +285,7 @@ fun AchievementCard(achievement: AchievementUI, modifier: Modifier = Modifier) {
         colors = CardDefaults.cardColors(containerColor = Color.White),
         shape = RoundedCornerShape(20.dp),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = if (achievement.isUnlocked) 6.dp else 2.dp
+            defaultElevation = if (isUnlocked) 6.dp else 2.dp
         )
     ) {
         Column(
@@ -313,23 +295,23 @@ fun AchievementCard(achievement: AchievementUI, modifier: Modifier = Modifier) {
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier.size(80.dp).clip(CircleShape).background(
-                    if (achievement.isUnlocked) {
-                        achievementCategoryColor(achievement.category).copy(alpha = 0.15f)
+                    if (isUnlocked) {
+                        achievementCategoryColor(mapCategory(achievement.category)).copy(alpha = 0.15f)
                     } else {
                         Color.LightGray.copy(alpha = 0.1f)
                     }
                 )
             ) {
                 Text(
-                    achievement.icon, fontSize = 42.sp,
-                    modifier = Modifier.alpha(if (achievement.isUnlocked) 1f else 0.3f)
+                    achievement.badgeIcon, fontSize = 42.sp,
+                    modifier = Modifier.alpha(if (isUnlocked) 1f else 0.3f)
                 )
             }
 
             Spacer(modifier = Modifier.height(12.dp))
             Text(
                 achievement.title, fontSize = 14.sp, fontWeight = FontWeight.Bold,
-                color = if (achievement.isUnlocked) DarkGreen else Color.Gray,
+                color = if (isUnlocked) DarkGreen else Color.Gray,
                 fontFamily = Poppins, maxLines = 2, textAlign = TextAlign.Center,
                 modifier = Modifier.height(36.dp)
             )
@@ -339,21 +321,21 @@ fun AchievementCard(achievement: AchievementUI, modifier: Modifier = Modifier) {
                 fontFamily = Poppins, maxLines = 2, textAlign = TextAlign.Center
             )
 
-            if (!achievement.isUnlocked && achievement.progress > 0) {
+            if (!isUnlocked && progress > 0) {
                 Spacer(modifier = Modifier.height(12.dp))
                 LinearProgressIndicator(
-                    progress = { achievement.progress / 100f },
+                    progress = { progress / 100f },
                     modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
-                    color = achievementCategoryColor(achievement.category),
+                    color = achievementCategoryColor(mapCategory(achievement.category)),
                     trackColor = Color.LightGray.copy(alpha = 0.2f),
                     strokeCap = ProgressIndicatorDefaults.LinearStrokeCap,
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    "${achievement.progress}% Complete", fontSize = 10.sp,
+                    "${progress}% Complete", fontSize = 10.sp,
                     color = Color.Gray, fontFamily = Poppins, fontWeight = FontWeight.Medium
                 )
-            } else if (achievement.isUnlocked && achievement.unlockedDate != null) {
+            } else if (isUnlocked && unlockedDate != null) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -361,13 +343,13 @@ fun AchievementCard(achievement: AchievementUI, modifier: Modifier = Modifier) {
                 ) {
                     Icon(
                         Icons.Default.CheckCircle, "Unlocked",
-                        tint = achievementCategoryColor(achievement.category),
+                        tint = achievementCategoryColor(mapCategory(achievement.category)),
                         modifier = Modifier.size(14.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        achievement.unlockedDate, fontSize = 10.sp,
-                        color = achievementCategoryColor(achievement.category),
+                        unlockedDate, fontSize = 10.sp,
+                        color = achievementCategoryColor(mapCategory(achievement.category)),
                         fontFamily = Poppins, fontWeight = FontWeight.Medium
                     )
                 }
