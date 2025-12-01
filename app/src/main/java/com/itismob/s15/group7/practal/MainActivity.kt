@@ -22,27 +22,30 @@ import androidx.navigation.compose.rememberNavController
 import com.itismob.s15.group7.practal.domain.controller.ChallengeViewModel
 import com.itismob.s15.group7.practal.domain.controller.PostViewModel
 import com.itismob.s15.group7.practal.domain.controller.UserViewModel
+import com.itismob.s15.group7.practal.domain.controller.PracticeSessionViewModel
+import com.itismob.s15.group7.practal.domain.controller.AchievementViewModel
+import com.itismob.s15.group7.practal.domain.controller.ClubViewModel
 import com.itismob.s15.group7.practal.ui.screens.AchievementsScreen
 import com.itismob.s15.group7.practal.ui.screens.ChallengeDetailScreen
 import com.itismob.s15.group7.practal.ui.screens.ChallengeScreen
+import com.itismob.s15.group7.practal.ui.screens.ClubsScreen
 import com.itismob.s15.group7.practal.ui.screens.CompletedProfileScreen
 import com.itismob.s15.group7.practal.ui.screens.DashboardScreen
 import com.itismob.s15.group7.practal.ui.screens.GoalSkillInfoScreen
 import com.itismob.s15.group7.practal.ui.screens.IntroductionScreen
+import com.itismob.s15.group7.practal.ui.screens.LeaderboardScreen
 import com.itismob.s15.group7.practal.ui.screens.LogPracticeSessionScreen
 import com.itismob.s15.group7.practal.ui.screens.LoginScreen
 import com.itismob.s15.group7.practal.ui.screens.MusicInfoScreen
 import com.itismob.s15.group7.practal.ui.screens.OtherDetailsScreen
 import com.itismob.s15.group7.practal.ui.screens.OtherProfileScreen
 import com.itismob.s15.group7.practal.ui.screens.PhotoUploadScreen
+import com.itismob.s15.group7.practal.ui.screens.ProgressAnalyticsScreen
 import com.itismob.s15.group7.practal.ui.screens.SignUpScreen
 import com.itismob.s15.group7.practal.ui.screens.UserProfileScreen
 import com.itismob.s15.group7.practal.ui.screens.WelcomeProfileScreen
 import com.itismob.s15.group7.practal.ui.theme.Montserrat
 import com.itismob.s15.group7.practal.ui.theme.Poppins
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-
 
 
 class MainActivity : ComponentActivity() {
@@ -65,6 +68,9 @@ fun PractalApp() {
     val userViewModel: UserViewModel = viewModel()
     val challengeViewModel: ChallengeViewModel = viewModel()
     val postViewModel: PostViewModel = viewModel()
+    val practiceSessionViewModel: PracticeSessionViewModel = viewModel { PracticeSessionViewModel(userViewModel) }
+    val achievementViewModel: AchievementViewModel = viewModel()
+    val clubViewModel: ClubViewModel = viewModel()
     val email: String = ""
 
     NavHost(navController, startDestination = "landing") {
@@ -80,8 +86,14 @@ fun PractalApp() {
         composable("other_details") { OtherDetailsScreen(navController, userViewModel) }
         composable("done") { CompletedProfileScreen(navController, userViewModel) }
 
-        composable("dashboard") { DashboardScreen(navController, userViewModel, postViewModel) }
+        composable("dashboard") { DashboardScreen(navController, userViewModel, postViewModel, practiceSessionViewModel, clubViewModel) }
 
+        composable("analytics") { ProgressAnalyticsScreen(navController, userViewModel, practiceSessionViewModel) }
+        composable("leaderboard") { LeaderboardScreen(
+            navController,
+            viewModel = userViewModel
+        ) }
+        composable("clubs") { ClubsScreen(navController, clubViewModel, userViewModel) }
 
         composable("challenges") { ChallengeScreen(navController, userViewModel, challengeViewModel) }
         composable("challenge_detail/{challenge_id}") { backStackEntry ->
@@ -89,13 +101,13 @@ fun PractalApp() {
             ChallengeDetailScreen(navController, challengeId, userViewModel, challengeViewModel)
         }
 
-        composable("log_practice") { LogPracticeSessionScreen(navController) }
-        composable("all_achievements") { AchievementsScreen(navController) }
+        composable("log_practice") { LogPracticeSessionScreen(navController, practiceSessionViewModel, userViewModel, achievementViewModel) }
+        composable("all_achievements") { AchievementsScreen(navController, userViewModel, achievementViewModel) }
 
-        composable("profile") { UserProfileScreen(navController, userViewModel) }
+        composable("profile") { UserProfileScreen(navController, userViewModel, achievementViewModel) }
         composable("other_profile/{email}") { backStackEntry ->
             val email = backStackEntry.arguments?.getString("email") ?: ""
-            OtherProfileScreen(navController, userViewModel, email)
+            OtherProfileScreen(navController, userViewModel, email, achievementViewModel)
         }
 
     }

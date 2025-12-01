@@ -25,41 +25,34 @@ import androidx.navigation.NavHostController
 import com.itismob.s15.group7.practal.DarkGreen
 import com.itismob.s15.group7.practal.LightGreen
 import com.itismob.s15.group7.practal.WhiteBox
+import com.itismob.s15.group7.practal.domain.controller.ClubViewModel
+import com.itismob.s15.group7.practal.domain.controller.UserViewModel
+import com.itismob.s15.group7.practal.domain.model.Club
 import com.itismob.s15.group7.practal.ui.theme.Poppins
-
-data class Club(
-    val id: Int,
-    val name: String,
-    val description: String,
-    val category: String,
-    val memberCount: Int,
-    val emoji: String,
-    val isMember: Boolean = false
-)
+import kotlinx.coroutines.launch
 
 @Composable
-fun ClubsScreen(navController: NavHostController) {
+fun ClubsScreen(
+    navController: NavHostController,
+    clubViewModel: ClubViewModel,
+    userViewModel: UserViewModel
+) {
+    val clubs by clubViewModel.clubs.collectAsState()
+    val userClubIds by clubViewModel.userClubs.collectAsState()
+    val currentUser by userViewModel.loggedInUser.collectAsState()
+    val scope = rememberCoroutineScope()
+    
     var selectedCategory by remember { mutableStateOf("All") }
-    val categories = listOf("All", "Genre", "Instrument", "Skill Level", "Location", "Activity")
+    val categories = listOf("All", "Genre", "Instrument", "Skill Level", "Activity")
     
-    val clubs = listOf(
-        Club(1, "Jazz Enthusiasts", "For lovers of jazz music and improvisation", "Genre", 1240, "🎷", true),
-        Club(2, "Piano Masters", "Classical and contemporary piano players", "Instrument", 856, "🎹", true),
-        Club(3, "Rock & Roll Club", "Rock music fans and performers", "Genre", 2103, "🎸", false),
-        Club(4, "Beginner's Circle", "Just starting your musical journey? Join us!", "Skill Level", 3421, "🌱", false),
-        Club(5, "Violin Virtuosos", "String players unite", "Instrument", 645, "🎻", false),
-        Club(6, "Classical Music Society", "Appreciate the classics", "Genre", 1872, "🎼", true),
-        Club(7, "Drummers United", "Rhythm section headquarters", "Instrument", 934, "🥁", false),
-        Club(8, "Daily Practice Squad", "Commit to practicing every day", "Activity", 5234, "💪", true),
-        Club(9, "Blues & Soul", "Blues, soul, and R&B community", "Genre", 1456, "🎺", false),
-        Club(10, "Guitar Guild", "All things guitar", "Instrument", 3210, "🎸", false)
-    )
-    
-    val filteredClubs = if (selectedCategory == "All") {
-        clubs
-    } else {
-        clubs.filter { it.category == selectedCategory }
+    // load user clubs on screen
+    LaunchedEffect(currentUser?.id) {
+        currentUser?.id?.let { userId ->
+            clubViewModel.loadUserClubs(userId)
+        }
     }
+    
+    val filteredClubs = clubViewModel.getClubsByCategory(selectedCategory)
 
     Column(
         modifier = Modifier
@@ -103,7 +96,7 @@ fun ClubsScreen(navController: NavHostController) {
             }
         }
 
-        val myClubs = clubs.filter { it.isMember }
+        val myClubs = clubs.filter { userClubIds.contains(it.id) }
         if (myClubs.isNotEmpty()) {
             Text(
                 text = "My Clubs (${myClubs.size})",
@@ -146,7 +139,22 @@ fun ClubsScreen(navController: NavHostController) {
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(filteredClubs) { club ->
-                ClubCard(club)
+                val isMember = userClubIds.contains(club.id)
+                ClubCard(
+                    club = club,
+                    isMember = isMember,
+                    onJoinClick = {
+                        scope.launch {
+                            currentUser?.id?.let { userId ->
+                                if (isMember) {
+                                    clubViewModel.leaveClub(userId, club.id)
+                                } else {
+                                    clubViewModel.joinClub(userId, club.id)
+                                }
+                            }
+                        }
+                    }
+                )
             }
         }
     }
@@ -217,7 +225,11 @@ fun MyClubCard(club: Club) {
 }
 
 @Composable
-fun ClubCard(club: Club) {
+fun ClubCard(
+    club: Club,
+    isMember: Boolean,
+    onJoinClick: () -> Unit
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -303,23 +315,23 @@ fun ClubCard(club: Club) {
             
 
             Button(
-                onClick = { /* TODO: Handle join/leave */ },
+                onClick = onJoinClick,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (club.isMember) Color.White else DarkGreen,
-                    contentColor = if (club.isMember) DarkGreen else Color.White
+                    containerColor = if (isMember) Color.White else DarkGreen,
+                    contentColor = if (isMember) DarkGreen else Color.White
                 ),
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier
                     .height(36.dp)
                     .then(
-                        if (club.isMember) Modifier.Companion.border(1.dp,
+                        if (isMember) Modifier.Companion.border(1.dp,
                             DarkGreen, RoundedCornerShape(12.dp))
                         else Modifier
                     ),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp)
             ) {
                 Text(
-                    text = if (club.isMember) "Joined" else "Join",
+                    text = if (isMember) "Joined" else "Join",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
                     fontFamily = Poppins

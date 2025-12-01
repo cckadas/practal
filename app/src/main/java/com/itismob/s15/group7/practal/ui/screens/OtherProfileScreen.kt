@@ -1,6 +1,7 @@
 package com.itismob.s15.group7.practal.ui.screens
 
 import android.net.Uri
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -26,36 +27,61 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import com.itismob.s15.group7.practal.DarkGreen
 import com.itismob.s15.group7.practal.LightGreen
 import com.itismob.s15.group7.practal.WhiteBox
+import com.itismob.s15.group7.practal.domain.controller.AchievementViewModel
 import com.itismob.s15.group7.practal.domain.controller.UserViewModel
 import com.itismob.s15.group7.practal.domain.model.User
+import com.itismob.s15.group7.practal.domain.model.Achievement
+import com.itismob.s15.group7.practal.domain.model.UserAchievement
+import com.itismob.s15.group7.practal.domain.model.UserLevel
+import com.itismob.s15.group7.practal.domain.model.computeLevel
 import com.itismob.s15.group7.practal.ui.theme.Poppins
+import java.text.SimpleDateFormat
+import java.util.*
 
 
 
 
 
 @Composable
-fun OtherProfileScreen(navController: NavHostController, userViewModel: UserViewModel, email: String) {
-
+fun OtherProfileScreen(
+    navController: NavHostController,
+    userViewModel: UserViewModel,
+    email: String,
+    achievementViewModel: AchievementViewModel = viewModel()
+) {
     val visitedUser = userViewModel.getUserByEmail(Uri.decode(email))
-
-    val achievements = listOf(
-        Achievement(1, "Century Practice", "Practiced for 100+ hours", "🎯", true, 100, "Practice", "Oct 15, 2025"),
-        Achievement(2, "30-Day Streak", "Maintained a 30-day practice streak", "🔥", true, 100, "Consistency", "Oct 10, 2025"),
-        Achievement(3, "Challenge Master", "Completed 10 challenges", "🏆", true, 100, "Challenges", "Oct 5, 2025"),
-        Achievement(4, "Technique Pro", "Mastered 5 techniques", "⚡", true, 100, "Mastery", "Sep 28, 2025"),
-        Achievement(5, "Repertoire Complete", "Learned 20 pieces", "🎼", false, 65, "Repertoire", null),
-        Achievement(6, "Community Star", "100+ community engagements", "⭐", false, 80, "Community", null),
-        Achievement(7, "Speed Demon", "Practiced 7 days in a row", "⚡", true, 100, "Consistency", "Sep 20, 2025"),
-        Achievement(8, "Night Owl", "Practiced after midnight 10 times", "🦉", false, 40, "Special", null),
-        Achievement(9, "Early Bird", "Practiced before 6 AM 10 times", "🌅", false, 20, "Special", null),
-        Achievement(10, "Social Butterfly", "Followed 50 musicians", "🦋", true, 100, "Community", "Sep 15, 2025")
-    )
+    val allAchievements by achievementViewModel.achievements.collectAsState()
+    val userAchievements by achievementViewModel.userAchievements.collectAsState()
+    
+    val userId = visitedUser?.id ?: ""
+    
+    LaunchedEffect(userId) {
+        if (userId.isNotEmpty()) {
+            achievementViewModel.loadUserAchievements(userId)
+        }
+    }
+    
+    // Log level info whenever visited user's XP changes
+    LaunchedEffect(visitedUser?.xp) {
+        visitedUser?.let { user ->
+            val levelInfo = computeLevel(user.xp)
+            Log.d("OtherProfileScreen", "USER LEVEL INFO---------------------")
+            Log.d("OtherProfileScreen", "Viewing User: ${user.email}")
+            Log.d("OtherProfileScreen", "Total XP: ${user.xp}")
+            Log.d("OtherProfileScreen", "Current Level: ${levelInfo.level} (${levelInfo.title})")
+            Log.d("OtherProfileScreen", "XP in Current Level: ${levelInfo.currentXP} / ${levelInfo.xpToNextLevel}")
+            Log.d("OtherProfileScreen", "XP to Next Level: ${levelInfo.xpToNextLevel - levelInfo.currentXP}")
+            Log.d("OtherProfileScreen", "------------------------------------")
+        }
+    }
+    
+    val unlockedAchievements = achievementViewModel.getUnlockedAchievements(userId)
 
     Column(
         modifier = Modifier
@@ -137,7 +163,7 @@ fun OtherProfileScreen(navController: NavHostController, userViewModel: UserView
 
 
             item {
-                OtherProfileRecentAchievements(visitedUser, navController, achievements)
+                OtherProfileRecentAchievements(visitedUser, navController, achievementViewModel, userAchievements)
                 Spacer(modifier = Modifier.height(24.dp))
             }
         }
@@ -409,8 +435,22 @@ fun OtherProfileInfoSection(visitedUser: User?, userViewModel: UserViewModel) {
 
 
 @Composable
-fun OtherProfileRecentAchievements(visitedUser: User?, navController: NavHostController, allAchievements: List<Achievement>) {
-    val recentAchievements = allAchievements.filter { it.isUnlocked }.take(6)
+fun OtherProfileRecentAchievements(
+    visitedUser: User?,
+    navController: NavHostController,
+    achievementViewModel: AchievementViewModel,
+    userAchievements: List<UserAchievement>
+) {
+    val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+    val recentUnlocked = userAchievements
+        .filter { it.completed }
+        .sortedByDescending { it.unlockedDate }
+        .take(6)
+        .mapNotNull { ua ->
+            achievementViewModel.getAchievementById(ua.achievementId)?.let { achievement ->
+                Triple(achievement, ua, ua.unlockedDate?.toDate()?.let { dateFormat.format(it) } ?: "")
+            }
+        }
 
     Card(
         modifier = Modifier
@@ -445,12 +485,18 @@ fun OtherProfileRecentAchievements(visitedUser: User?, navController: NavHostCon
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(recentAchievements) { achievement ->
+                items(recentUnlocked) { (achievement, _, unlockedDate) ->
                     ProfileAchievementBadge(
-                        emoji = achievement.icon,
+                        emoji = achievement.badgeIcon,
                         title = achievement.title,
-                        unlockedDate = achievement.unlockedDate ?: "",
-                        accentColor = achievementCategoryColor(achievement.category)
+                        unlockedDate = unlockedDate,
+                        accentColor = achievementCategoryColor(when (achievement.category) {
+                            "practice" -> "Practice"
+                            "challenge" -> "Challenge"
+                            "social" -> "Social"
+                            "special" -> "Special"
+                            else -> "Practice"
+                        })
                     )
                 }
             }
