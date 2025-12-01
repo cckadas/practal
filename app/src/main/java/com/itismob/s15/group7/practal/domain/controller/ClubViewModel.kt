@@ -22,6 +22,9 @@ class ClubViewModel : ViewModel() {
     private val _userClubs = MutableStateFlow<List<String>>(emptyList()) // List of clubIds user has joined
     val userClubs = _userClubs.asStateFlow()
     
+    private val _clubMembers = MutableStateFlow<List<com.itismob.s15.group7.practal.domain.model.User>>(emptyList())
+    val clubMembers = _clubMembers.asStateFlow()
+    
     private val _isLoading = MutableStateFlow(false)
     val isLoading = _isLoading.asStateFlow()
 
@@ -311,5 +314,51 @@ class ClubViewModel : ViewModel() {
                 isOfficial = true
             )
         )
+    }
+    
+    fun loadClubMembers(clubId: String) {
+        viewModelScope.launch {
+            try {
+                // get all userIds who are members of this club
+                val userClubsSnapshot = firestore.collection("userClubs")
+                    .whereEqualTo("clubId", clubId)
+                    .get()
+                    .await()
+                
+                val userIds = userClubsSnapshot.documents.mapNotNull { doc ->
+                    doc.toObject(UserClub::class.java)?.userId
+                }
+                
+                if (userIds.isEmpty()) {
+                    _clubMembers.value = emptyList()
+                    Log.d(TAG, "No members found for club $clubId")
+                    return@launch
+                }
+                
+                // fetch user details for all members
+                val members = mutableListOf<com.itismob.s15.group7.practal.domain.model.User>()
+                userIds.forEach { userId ->
+                    try {
+                        val userDoc = firestore.collection("users")
+                            .document(userId)
+                            .get()
+                            .await()
+                        
+                        userDoc.toObject(com.itismob.s15.group7.practal.domain.model.User::class.java)?.let {
+                            members.add(it.copy(id = userDoc.id))
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error loading user $userId", e)
+                    }
+                }
+                
+                _clubMembers.value = members.sortedByDescending { it.xp }
+                Log.d(TAG, "Loaded ${members.size} members for club $clubId")
+                
+            } catch (e: Exception) {
+                Log.e(TAG, "Error loading club members", e)
+                _clubMembers.value = emptyList()
+            }
+        }
     }
 }

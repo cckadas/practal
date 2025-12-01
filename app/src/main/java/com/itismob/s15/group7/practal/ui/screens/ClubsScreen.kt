@@ -112,7 +112,10 @@ fun ClubsScreen(
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
             ) {
                 items(myClubs) { club ->
-                    MyClubCard(club)
+                    MyClubCard(
+                        club = club,
+                        onClick = { navController.navigate("club_detail/${club.id}") }
+                    )
                 }
             }
             
@@ -183,8 +186,9 @@ fun ClubFilterChip(label: String, isSelected: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-fun MyClubCard(club: Club) {
+fun MyClubCard(club: Club, onClick: () -> Unit = {}) {
     Card(
+        onClick = onClick,
         modifier = Modifier
             .width(140.dp)
             .height(140.dp),
