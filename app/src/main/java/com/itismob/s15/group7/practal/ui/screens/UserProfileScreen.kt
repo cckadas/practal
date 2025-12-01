@@ -173,7 +173,7 @@ fun UserProfileScreen(
                 .fillMaxSize()
         ) {
             item {
-                ProfileHeader(userViewModel)
+                ProfileHeader(userViewModel, navController)
                 Spacer(modifier = Modifier.height(24.dp))
             }
 
@@ -192,7 +192,7 @@ fun UserProfileScreen(
 
 
 @Composable
-fun ProfileHeader(userViewModel: UserViewModel) {
+fun ProfileHeader(userViewModel: UserViewModel, navController: NavHostController) {
 
     val loggedInUser by userViewModel.loggedInUser.collectAsState()
 
@@ -278,6 +278,59 @@ fun ProfileHeader(userViewModel: UserViewModel) {
                     color = Color.White,
                     fontFamily = Poppins
                 )
+
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                // follower/following stats
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(24.dp)
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.clickable {
+                            loggedInUser?.email?.let { email ->
+                                navController.navigate("follow_list/$email/followers")
+                            }
+                        }
+                    ) {
+                        Text(
+                            text = "${loggedInUser?.followers?.size ?: 0}",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            fontFamily = Poppins
+                        )
+                        Text(
+                            text = "Followers",
+                            fontSize = 12.sp,
+                            color = Color.White.copy(alpha = 0.8f),
+                            fontFamily = Poppins
+                        )
+                    }
+                    
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.clickable {
+                            loggedInUser?.email?.let { email ->
+                                navController.navigate("follow_list/$email/following")
+                            }
+                        }
+                    ) {
+                        Text(
+                            text = "${loggedInUser?.following?.size ?: 0}",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            fontFamily = Poppins
+                        )
+                        Text(
+                            text = "Following",
+                            fontSize = 12.sp,
+                            color = Color.White.copy(alpha = 0.8f),
+                            fontFamily = Poppins
+                        )
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(8.dp))
 

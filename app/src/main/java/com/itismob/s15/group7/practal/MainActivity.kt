@@ -16,9 +16,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.itismob.s15.group7.practal.domain.controller.ChallengeViewModel
 import com.itismob.s15.group7.practal.domain.controller.PostViewModel
 import com.itismob.s15.group7.practal.domain.controller.UserViewModel
@@ -28,9 +30,13 @@ import com.itismob.s15.group7.practal.domain.controller.ClubViewModel
 import com.itismob.s15.group7.practal.ui.screens.AchievementsScreen
 import com.itismob.s15.group7.practal.ui.screens.ChallengeDetailScreen
 import com.itismob.s15.group7.practal.ui.screens.ChallengeScreen
+import com.itismob.s15.group7.practal.ui.screens.ClubDetailScreen
 import com.itismob.s15.group7.practal.ui.screens.ClubsScreen
 import com.itismob.s15.group7.practal.ui.screens.CompletedProfileScreen
+import com.itismob.s15.group7.practal.ui.screens.CreatePostScreen
+import com.itismob.s15.group7.practal.ui.screens.CreatePracticePostScreen
 import com.itismob.s15.group7.practal.ui.screens.DashboardScreen
+import com.itismob.s15.group7.practal.ui.screens.FollowListScreen
 import com.itismob.s15.group7.practal.ui.screens.GoalSkillInfoScreen
 import com.itismob.s15.group7.practal.ui.screens.IntroductionScreen
 import com.itismob.s15.group7.practal.ui.screens.LeaderboardScreen
@@ -94,6 +100,13 @@ fun PractalApp() {
             viewModel = userViewModel
         ) }
         composable("clubs") { ClubsScreen(navController, clubViewModel, userViewModel) }
+        composable(
+            route = "club_detail/{clubId}",
+            arguments = listOf(navArgument("clubId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val clubId = backStackEntry.arguments?.getString("clubId") ?: ""
+            ClubDetailScreen(navController, clubViewModel, userViewModel, clubId)
+        }
 
         composable("challenges") { ChallengeScreen(navController, userViewModel, challengeViewModel) }
         composable("challenge_detail/{challenge_id}") { backStackEntry ->
@@ -108,6 +121,47 @@ fun PractalApp() {
         composable("other_profile/{email}") { backStackEntry ->
             val email = backStackEntry.arguments?.getString("email") ?: ""
             OtherProfileScreen(navController, userViewModel, email, achievementViewModel)
+        }
+        composable(
+            route = "follow_list/{userEmail}/{listType}",
+            arguments = listOf(
+                navArgument("userEmail") { type = NavType.StringType },
+                navArgument("listType") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val userEmail = backStackEntry.arguments?.getString("userEmail") ?: ""
+            val listType = backStackEntry.arguments?.getString("listType") ?: "followers"
+            FollowListScreen(navController, userViewModel, userEmail, listType)
+        }
+
+        // post creation routes
+        composable("create_post") { 
+            CreatePostScreen(navController, userViewModel, postViewModel) 
+        }
+        composable(
+            route = "create_practice_post/{instrument}/{practiceType}/{pieceOrFocus}/{difficulty}/{durationMinutes}/{earnedXP}/{sessionId}",
+            arguments = listOf(
+                navArgument("instrument") { type = NavType.StringType },
+                navArgument("practiceType") { type = NavType.StringType },
+                navArgument("pieceOrFocus") { type = NavType.StringType },
+                navArgument("difficulty") { type = NavType.StringType },
+                navArgument("durationMinutes") { type = NavType.IntType },
+                navArgument("earnedXP") { type = NavType.IntType },
+                navArgument("sessionId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val instrument = backStackEntry.arguments?.getString("instrument") ?: ""
+            val practiceType = backStackEntry.arguments?.getString("practiceType") ?: ""
+            val pieceOrFocus = backStackEntry.arguments?.getString("pieceOrFocus") ?: ""
+            val difficulty = backStackEntry.arguments?.getString("difficulty") ?: ""
+            val durationMinutes = backStackEntry.arguments?.getInt("durationMinutes") ?: 0
+            val earnedXP = backStackEntry.arguments?.getInt("earnedXP") ?: 0
+            val sessionId = backStackEntry.arguments?.getString("sessionId") ?: ""
+            
+            CreatePracticePostScreen(
+                navController, userViewModel, postViewModel,
+                instrument, practiceType, pieceOrFocus, difficulty, durationMinutes, earnedXP, sessionId
+            )
         }
 
     }

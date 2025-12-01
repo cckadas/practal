@@ -40,7 +40,23 @@ class PostViewModel : ViewModel() {
         db.collection("posts")
             .addSnapshotListener { value, error ->
                 if (error != null) return@addSnapshotListener
-                if (value != null) {  _postList.value = value.toObjects(Post::class.java) }
+                if (value != null) {
+                    val posts = value.documents.mapNotNull { doc ->
+                        try {
+                            val data = doc.data ?: return@mapNotNull null
+                            val postType = data["postType"] as? String ?: "regular"
+                            
+                            when (postType) {
+                                "practice" -> doc.toObject(Post.PracticePost::class.java)
+                                else -> doc.toObject(Post.RegularPost::class.java)
+                            }
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                            null
+                        }
+                    }
+                    _postList.value = posts
+                }
             }
     }
 
@@ -69,6 +85,86 @@ class PostViewModel : ViewModel() {
             .update("comments", FieldValue.arrayUnion(comment))
             .addOnSuccessListener { println("Comment added") }
             .addOnFailureListener { it.printStackTrace() }
+    }
+
+    fun createRegularPost(
+        ownerEmail: String,
+        ownerImg: String,
+        postImg: String,
+        caption: String,
+        onSuccess: () -> Unit,
+        onFailure: (Exception) -> Unit
+    ) {
+        val postId = db.collection("posts").document().id
+        val postData = hashMapOf(
+            "id" to postId,
+            "owner_email" to ownerEmail,
+            "owner_img" to ownerImg,
+            "post_img" to postImg,
+            "caption" to caption,
+            "likes" to emptyList<String>(),
+            "comments" to emptyList<String>(),
+            "date_posted" to com.google.firebase.Timestamp.now(),
+            "postType" to "regular"
+        )
+        
+        db.collection("posts").document(postId)
+            .set(postData)
+            .addOnSuccessListener { 
+                println("Regular post created: $postId")
+                onSuccess()
+            }
+            .addOnFailureListener { e ->
+                e.printStackTrace()
+                onFailure(e)
+            }
+    }
+
+    fun createPracticePost(
+        ownerEmail: String,
+        ownerImg: String,
+        postImg: String,
+        caption: String,
+        sessionId: String,
+        instrument: String,
+        practiceType: String,
+        pieceOrFocus: String,
+        durationMinutes: Int,
+        difficulty: String,
+        earnedXP: Int,
+        onSuccess: () -> Unit,
+        onFailure: (Exception) -> Unit
+    ) {
+        val postId = db.collection("posts").document().id
+        val postData = hashMapOf(
+            "id" to postId,
+            "owner_email" to ownerEmail,
+            "owner_img" to ownerImg,
+            "post_img" to postImg,
+            "caption" to caption,
+            "likes" to emptyList<String>(),
+            "comments" to emptyList<String>(),
+            "date_posted" to com.google.firebase.Timestamp.now(),
+            "postType" to "practice",
+            "sessionId" to sessionId,
+            "instrument" to instrument,
+            "practiceType" to practiceType,
+            "pieceOrFocus" to pieceOrFocus,
+            "durationMinutes" to durationMinutes,
+            "difficulty" to difficulty,
+            "earnedXP" to earnedXP
+        )
+        
+        db.collection("posts").document(postId)
+            .set(postData)
+            .addOnSuccessListener { 
+                println("Practice post created: $postId")
+                onSuccess()
+            }
+            .addOnFailureListener { e ->
+                e.printStackTrace()
+                onFailure(e)
+            }
     }
 
 }

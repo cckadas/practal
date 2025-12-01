@@ -3,6 +3,9 @@ package com.itismob.s15.group7.practal.domain.controller
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.Firebase
@@ -53,9 +56,24 @@ class UserViewModel : ViewModel() {
     fun getUserList() {
         db.collection("users")
             .addSnapshotListener { value, error ->
-                if (error != null) return@addSnapshotListener
+                if (error != null) {
+                    Log.e("UserViewModel", "Error in getUserList listener: ${error.message}", error)
+                    return@addSnapshotListener
+                }
                 if (value != null) {
-                    _userList.value = value.toObjects(User::class.java)
+                    val users = value.toObjects(User::class.java)
+                    _userList.value = users
+                    Log.d("UserViewModel", "User list updated from Firebase - ${users.size} users loaded")
+                    
+                    // Log specific user data for debugging
+                    _loggedInUser.value?.let { currentUser ->
+                        val updatedCurrentUser = users.find { it.email == currentUser.email }
+                        if (updatedCurrentUser != null) {
+                            Log.d("UserViewModel", "Current user updated - followers: ${updatedCurrentUser.followers.size}, following: ${updatedCurrentUser.following.size}")
+                            Log.d("UserViewModel", "Current user following list: ${updatedCurrentUser.following}")
+                            Log.d("UserViewModel", "Current user followers list: ${updatedCurrentUser.followers}")
+                        }
+                    }
                 }
             }
     }
@@ -124,6 +142,12 @@ class UserViewModel : ViewModel() {
 
     fun getUserByEmail(email: String): User? {
         return _userList.value.find { it.email == email }
+    }
+
+    @Composable
+    fun getUserByEmailReactive(email: String): User? {
+        val userList by userList.collectAsState()
+        return userList.find { it.email == email }
     }
 
 
@@ -206,6 +230,158 @@ class UserViewModel : ViewModel() {
         val rankIndex = rankedUsers.indexOfFirst { it.email == targetEmail }
         val rank = if (rankIndex != -1) rankIndex + 1 else null
         return Pair(rankedUsers, rank)
+    }
+    
+    // follow a user
+    suspend fun followUser(currentUserEmail: String, targetUserEmail: String): Boolean {
+        return try {
+            Log.d("UserViewModel", "FOLLOW OPERATION START--------")
+            Log.d("UserViewModel", "Current user: $currentUserEmail wants to follow: $targetUserEmail")
+            
+            // find id
+            val usersQuery = db.collection("users").get().await()
+            var currentUserDoc: String? = null
+            var targetUserDoc: String? = null
+            
+            for (doc in usersQuery.documents) {
+                val user = doc.toObject(User::class.java)
+                if (user?.email == currentUserEmail) {
+                    currentUserDoc = doc.id
+                    Log.d("UserViewModel", "Found current user document ID: ${doc.id}")
+                }
+                if (user?.email == targetUserEmail) {
+                    targetUserDoc = doc.id
+                    Log.d("UserViewModel", "Found target user document ID: ${doc.id}")
+                }
+            }
+            
+            if (currentUserDoc == null || targetUserDoc == null) {
+                Log.e("UserViewModel", "Could not find document IDs - currentUserDoc: $currentUserDoc, targetUserDoc: $targetUserDoc")
+                return false
+            }
+            
+            val currentUserRef = db.collection("users").document(currentUserDoc)
+            val targetUserRef = db.collection("users").document(targetUserDoc)
+            
+            db.runTransaction { transaction ->
+                Log.d("UserViewModel", "Starting Firebase transaction...")
+                val currentUser = transaction.get(currentUserRef).toObject(User::class.java)
+                val targetUser = transaction.get(targetUserRef).toObject(User::class.java)
+                
+                Log.d("UserViewModel", "Current user loaded: ${currentUser != null}")
+                Log.d("UserViewModel", "Target user loaded: ${targetUser != null}")
+                
+                if (currentUser != null && targetUser != null) {
+                    Log.d("UserViewModel", "BEFORE - Current user following: ${currentUser.following}")
+                    Log.d("UserViewModel", "BEFORE - Target user followers: ${targetUser.followers}")
+                    
+                    // add target to current user's following list
+                    val updatedFollowing = currentUser.following.toMutableList()
+                    if (!updatedFollowing.contains(targetUserEmail)) {
+                        updatedFollowing.add(targetUserEmail)
+                        Log.d("UserViewModel", "Adding $targetUserEmail to $currentUserEmail's following list")
+                        Log.d("UserViewModel", "NEW following list: $updatedFollowing")
+                        transaction.update(currentUserRef, "following", updatedFollowing)
+                    } else {
+                        Log.d("UserViewModel", "$targetUserEmail already in following list")
+                    }
+                    
+                    // add current user to target's followers list
+                    val updatedFollowers = targetUser.followers.toMutableList()
+                    if (!updatedFollowers.contains(currentUserEmail)) {
+                        updatedFollowers.add(currentUserEmail)
+                        Log.d("UserViewModel", "Adding $currentUserEmail to $targetUserEmail's followers list")
+                        Log.d("UserViewModel", "NEW followers list: $updatedFollowers")
+                        transaction.update(targetUserRef, "followers", updatedFollowers)
+                    } else {
+                        Log.d("UserViewModel", "$currentUserEmail already in followers list")
+                    }
+                } else {
+                    Log.e("UserViewModel", "Failed to load users - currentUser: ${currentUser != null}, targetUser: ${targetUser != null}")
+                }
+            }.await()
+            
+            Log.d("UserViewModel", "Firebase transaction completed successfully")
+            Log.d("UserViewModel", "$currentUserEmail followed $targetUserEmail")
+            Log.d("UserViewModel", "FOLLOW OPERATION END--------")
+            true
+        } catch (e: Exception) {
+            Log.e("UserViewModel", "Error following user: ${e.message}", e)
+            Log.d("UserViewModel", "FOLLOW OPERATION FAILED--------")
+            false
+        }
+    }
+    
+    // unfollow a user
+    suspend fun unfollowUser(currentUserEmail: String, targetUserEmail: String): Boolean {
+        return try {
+            Log.d("UserViewModel", "=== UNFOLLOW OPERATION START ===")
+            Log.d("UserViewModel", "Current user: $currentUserEmail wants to unfollow: $targetUserEmail")
+            
+            // First, find the actual document IDs by email
+            val usersQuery = db.collection("users").get().await()
+            var currentUserDoc: String? = null
+            var targetUserDoc: String? = null
+            
+            for (doc in usersQuery.documents) {
+                val user = doc.toObject(User::class.java)
+                if (user?.email == currentUserEmail) {
+                    currentUserDoc = doc.id
+                    Log.d("UserViewModel", "Found current user document ID: ${doc.id}")
+                }
+                if (user?.email == targetUserEmail) {
+                    targetUserDoc = doc.id
+                    Log.d("UserViewModel", "Found target user document ID: ${doc.id}")
+                }
+            }
+            
+            if (currentUserDoc == null || targetUserDoc == null) {
+                Log.e("UserViewModel", "Could not find document IDs - currentUserDoc: $currentUserDoc, targetUserDoc: $targetUserDoc")
+                return false
+            }
+            
+            val currentUserRef = db.collection("users").document(currentUserDoc)
+            val targetUserRef = db.collection("users").document(targetUserDoc)
+            
+            db.runTransaction { transaction ->
+                Log.d("UserViewModel", "Starting Firebase transaction...")
+                val currentUser = transaction.get(currentUserRef).toObject(User::class.java)
+                val targetUser = transaction.get(targetUserRef).toObject(User::class.java)
+                
+                Log.d("UserViewModel", "Current user loaded: ${currentUser != null}")
+                Log.d("UserViewModel", "Target user loaded: ${targetUser != null}")
+                
+                if (currentUser != null && targetUser != null) {
+                    Log.d("UserViewModel", "BEFORE - Current user following: ${currentUser.following}")
+                    Log.d("UserViewModel", "BEFORE - Target user followers: ${targetUser.followers}")
+                    
+                    // remove target from current user's following list
+                    val updatedFollowing = currentUser.following.toMutableList()
+                    val wasRemoved = updatedFollowing.remove(targetUserEmail)
+                    Log.d("UserViewModel", "Removed $targetUserEmail from following: $wasRemoved")
+                    Log.d("UserViewModel", "NEW following list: $updatedFollowing")
+                    transaction.update(currentUserRef, "following", updatedFollowing)
+                    
+                    // remove current user from target's followers list
+                    val updatedFollowers = targetUser.followers.toMutableList()
+                    val wasRemovedFromFollowers = updatedFollowers.remove(currentUserEmail)
+                    Log.d("UserViewModel", "Removed $currentUserEmail from followers: $wasRemovedFromFollowers")
+                    Log.d("UserViewModel", "NEW followers list: $updatedFollowers")
+                    transaction.update(targetUserRef, "followers", updatedFollowers)
+                } else {
+                    Log.e("UserViewModel", "Failed to load users - currentUser: ${currentUser != null}, targetUser: ${targetUser != null}")
+                }
+            }.await()
+            
+            Log.d("UserViewModel", "Firebase transaction completed successfully")
+            Log.d("UserViewModel", "$currentUserEmail unfollowed $targetUserEmail")
+            Log.d("UserViewModel", "=== UNFOLLOW OPERATION END ===")
+            true
+        } catch (e: Exception) {
+            Log.e("UserViewModel", "Error unfollowing user: ${e.message}", e)
+            Log.d("UserViewModel", "=== UNFOLLOW OPERATION FAILED ===")
+            false
+        }
     }
 }
 

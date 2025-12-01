@@ -4,6 +4,7 @@ import android.net.Uri
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,6 +19,8 @@ import androidx.compose.material3.*
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
@@ -55,11 +58,12 @@ fun OtherProfileScreen(
     email: String,
     achievementViewModel: AchievementViewModel = viewModel()
 ) {
-    val visitedUser = userViewModel.getUserByEmail(Uri.decode(email))
+    val userList by userViewModel.userList.collectAsState()
+    val targetUser = userList.find { it.email == Uri.decode(email) }
     val allAchievements by achievementViewModel.achievements.collectAsState()
     val userAchievements by achievementViewModel.userAchievements.collectAsState()
     
-    val userId = visitedUser?.id ?: ""
+    val userId = targetUser?.id ?: ""
     
     LaunchedEffect(userId) {
         if (userId.isNotEmpty()) {
@@ -68,8 +72,8 @@ fun OtherProfileScreen(
     }
     
     // Log level info whenever visited user's XP changes
-    LaunchedEffect(visitedUser?.xp) {
-        visitedUser?.let { user ->
+    LaunchedEffect(targetUser?.xp) {
+        targetUser?.let { user ->
             val levelInfo = computeLevel(user.xp)
             Log.d("OtherProfileScreen", "USER LEVEL INFO---------------------")
             Log.d("OtherProfileScreen", "Viewing User: ${user.email}")
@@ -152,18 +156,18 @@ fun OtherProfileScreen(
                 .fillMaxSize()
         ) {
             item {
-                OtherProfileHeader(visitedUser, userViewModel)
+                OtherProfileHeader(targetUser, userViewModel, navController)
                 Spacer(modifier = Modifier.height(24.dp))
             }
 
             item {
-                OtherProfileInfoSection(visitedUser, userViewModel)
+                OtherProfileInfoSection(targetUser, userViewModel)
                 Spacer(modifier = Modifier.height(24.dp))
             }
 
 
             item {
-                OtherProfileRecentAchievements(visitedUser, navController, achievementViewModel, userAchievements)
+                OtherProfileRecentAchievements(targetUser, navController, achievementViewModel, userAchievements)
                 Spacer(modifier = Modifier.height(24.dp))
             }
         }
@@ -171,9 +175,26 @@ fun OtherProfileScreen(
 }
 
 @Composable
-fun OtherProfileHeader(visitedUser: User?, userViewModel: UserViewModel) {
+fun OtherProfileHeader(targetUser: User?, userViewModel: UserViewModel, navController: NavHostController) {
+    val loggedInUser by userViewModel.loggedInUser.collectAsState()
+    val scope = rememberCoroutineScope()
+    
+    val isFollowing by remember(loggedInUser, targetUser?.email) {
+        derivedStateOf {
+            loggedInUser?.following?.contains(targetUser?.email) ?: false
+        }
+    }
+    var isLoading by remember { mutableStateOf(false) }
+    
+    // Log following state changes
+    LaunchedEffect(isFollowing, targetUser?.email) {
+        if (targetUser != null) {
+            Log.d("OtherProfileScreen", "Following state updated - isFollowing=$isFollowing for ${targetUser.email}")
+            Log.d("OtherProfileScreen", "Current following list: ${loggedInUser?.following}")
+        }
+    }
 
-    val xp = visitedUser?.xp ?: 0
+    val xp = targetUser?.xp ?: 0
     val levelInfo = computeLevel(xp)
 
     Column(
@@ -207,9 +228,9 @@ fun OtherProfileHeader(visitedUser: User?, userViewModel: UserViewModel) {
                             .background(Color.White),
                         contentAlignment = Alignment.Center
                     ) {
-                        if (visitedUser?.image?.isNotEmpty() == true) {
+                        if (targetUser?.image?.isNotEmpty() == true) {
                             AsyncImage(
-                                model = visitedUser.image,
+                                model = targetUser.image,
                                 contentDescription = "Profile Picture",
                                 modifier = Modifier
                                     .size(96.dp)
@@ -249,17 +270,70 @@ fun OtherProfileHeader(visitedUser: User?, userViewModel: UserViewModel) {
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Text(
-                    text = "${visitedUser?.firstname} ${visitedUser?.lastname}",
+                    text = "${targetUser?.firstname} ${targetUser?.lastname}",
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White,
                     fontFamily = Poppins
                 )
 
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                // follower/following stats
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(24.dp)
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.clickable {
+                            targetUser?.email?.let { email ->
+                                navController.navigate("follow_list/$email/followers")
+                            }
+                        }
+                    ) {
+                        Text(
+                            text = "${targetUser?.followers?.size ?: 0}",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            fontFamily = Poppins
+                        )
+                        Text(
+                            text = "Followers",
+                            fontSize = 12.sp,
+                            color = Color.White.copy(alpha = 0.8f),
+                            fontFamily = Poppins
+                        )
+                    }
+                    
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.clickable {
+                            targetUser?.email?.let { email ->
+                                navController.navigate("follow_list/$email/following")
+                            }
+                        }
+                    ) {
+                        Text(
+                            text = "${targetUser?.following?.size ?: 0}",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            fontFamily = Poppins
+                        )
+                        Text(
+                            text = "Following",
+                            fontSize = 12.sp,
+                            color = Color.White.copy(alpha = 0.8f),
+                            fontFamily = Poppins
+                        )
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = "${visitedUser?.introduction}",
+                    text = "${targetUser?.introduction}",
                     fontSize = 13.sp,
                     color = Color.White.copy(alpha = 0.9f),
                     fontFamily = Poppins,
@@ -267,6 +341,69 @@ fun OtherProfileHeader(visitedUser: User?, userViewModel: UserViewModel) {
                     lineHeight = 18.sp,
                     modifier = Modifier.padding(horizontal = 32.dp)
                 )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // follow/unfollow button
+                Button(
+                    onClick = {
+                        val currentUser = loggedInUser
+                        if (!isLoading && currentUser != null && targetUser != null) {
+                            isLoading = true
+                            Log.d("OtherProfileScreen", "Follow button clicked - Current state: isFollowing=$isFollowing")
+                            Log.d("OtherProfileScreen", "Current user: ${currentUser.email}, Target user: ${targetUser.email}")
+                            scope.launch {
+                                val success = if (isFollowing) {
+                                    Log.d("OtherProfileScreen", "Attempting to unfollow ${targetUser.email}")
+                                    userViewModel.unfollowUser(currentUser.email, targetUser.email)
+                                } else {
+                                    Log.d("OtherProfileScreen", "Attempting to follow ${targetUser.email}")
+                                    userViewModel.followUser(currentUser.email, targetUser.email)
+                                }
+                                Log.d("OtherProfileScreen", "Follow/unfollow operation completed - Success: $success")
+                                isLoading = false
+                            }
+                        } else {
+                            Log.w("OtherProfileScreen", "Follow button click ignored - isLoading=$isLoading, currentUser=${currentUser != null}, targetUser=${targetUser != null}")
+                        }
+                    },
+                    enabled = !isLoading,
+                    modifier = Modifier
+                        .fillMaxWidth(0.6f)
+                        .height(44.dp),
+                    shape = RoundedCornerShape(22.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isFollowing) Color.White else DarkGreen,
+                        contentColor = if (isFollowing) DarkGreen else Color.White
+                    ),
+                    border = if (isFollowing) BorderStroke(2.dp, DarkGreen) else null
+                ) {
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            color = if (isFollowing) DarkGreen else Color.White,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = if (isFollowing) Icons.Default.Check else Icons.Default.PersonAdd,
+                                contentDescription = if (isFollowing) "Following" else "Follow",
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = if (isFollowing) "Following" else "Follow",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = Poppins
+                            )
+                        }
+                    }
+                }
             }
         }
 
@@ -348,7 +485,7 @@ fun OtherProfileHeader(visitedUser: User?, userViewModel: UserViewModel) {
 
 
 @Composable
-fun OtherProfileInfoSection(visitedUser: User?, userViewModel: UserViewModel) {
+fun OtherProfileInfoSection(targetUser: User?, userViewModel: UserViewModel) {
 
     Column(
         modifier = Modifier
@@ -383,7 +520,7 @@ fun OtherProfileInfoSection(visitedUser: User?, userViewModel: UserViewModel) {
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                val instrumentList = visitedUser?.preferences ?: emptyList()
+                val instrumentList = targetUser?.preferences ?: emptyList()
 
                 items(instrumentList) { instrument ->
                     ProfileInfoChip(text = instrument)
@@ -423,7 +560,7 @@ fun OtherProfileInfoSection(visitedUser: User?, userViewModel: UserViewModel) {
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                val interestList = visitedUser?.interests ?: emptyList()
+                val interestList = targetUser?.interests ?: emptyList()
 
                 items(interestList) { interest ->
                     ProfileInfoChip(text = interest)
@@ -436,7 +573,7 @@ fun OtherProfileInfoSection(visitedUser: User?, userViewModel: UserViewModel) {
 
 @Composable
 fun OtherProfileRecentAchievements(
-    visitedUser: User?,
+    targetUser: User?,
     navController: NavHostController,
     achievementViewModel: AchievementViewModel,
     userAchievements: List<UserAchievement>

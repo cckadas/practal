@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
@@ -67,6 +68,7 @@ fun LogPracticeSessionScreen(
     
     // xp and rewards
     var earnedXP by remember { mutableIntStateOf(0) }
+    var sessionId by remember { mutableStateOf("") }
     
     // dialog states
     var showSuccessDialog by remember { mutableStateOf(false) }
@@ -123,7 +125,10 @@ fun LogPracticeSessionScreen(
                 val multiplier = practiceSessionViewModel.getDifficultyMultiplier(difficulty)
                 earnedXP = (durationMinutes * multiplier).toInt()
                 
-                Log.d("LogPracticeSession", "XP: ${durationMinutes}min × ${multiplier}x = $earnedXP XP")
+                // store session ID before saving
+                sessionId = practiceSessionViewModel.currentSession.value?.id ?: ""
+                
+                Log.d("LogPracticeSession", "XP: ${durationMinutes}min × ${multiplier}x = $earnedXP XP, SessionID: $sessionId")
                 
                 // save session with frozen duration
                 practiceSessionViewModel.endPracticeSession(notes, difficulty, frozenDurationSeconds)
@@ -167,9 +172,20 @@ fun LogPracticeSessionScreen(
             durationSeconds = frozenDurationSeconds,
             currentLevel = levelInfo.level,
             totalXP = totalXP,
+            instrument = instrument,
+            practiceType = practiceType,
+            pieceOrFocus = practiceFocus,
+            difficulty = difficulty,
             onDismiss = {
                 showSuccessDialog = false
                 navController.popBackStack()
+            },
+            onShare = {
+                showSuccessDialog = false
+                // navigate to create practice post
+                navController.navigate(
+                    "create_practice_post/$instrument/$practiceType/$practiceFocus/$difficulty/$frozenDurationSeconds/$earnedXP/$sessionId"
+                )
             }
         )
     }
@@ -211,7 +227,12 @@ private fun SessionCompleteDialog(
     durationSeconds: Int,
     currentLevel: Int,
     totalXP: Int,
-    onDismiss: () -> Unit
+    instrument: String,
+    practiceType: String,
+    pieceOrFocus: String,
+    difficulty: String,
+    onDismiss: () -> Unit,
+    onShare: () -> Unit
 ) {
     // calculate start and end xp
     val startXP = totalXP - earnedXP
@@ -282,13 +303,26 @@ private fun SessionCompleteDialog(
             }
         },
         confirmButton = {
-            Button(
-                onClick = onDismiss,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = DarkGreen),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text("Awesome!", fontFamily = Poppins, fontWeight = FontWeight.Bold)
+            Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = onShare,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = DarkGreen),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Share Session", fontFamily = Poppins, fontWeight = FontWeight.Bold)
+                }
+                OutlinedButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = DarkGreen),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(2.dp, DarkGreen)
+                ) {
+                    Text("Close", fontFamily = Poppins, fontWeight = FontWeight.Bold)
+                }
             }
         },
         containerColor = WhiteBox,
@@ -525,7 +559,7 @@ fun Step3_CompleteSession(
             Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(18.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
-            // Session Recap Card
+            // session recap
             Card(
                 colors = CardDefaults.cardColors(containerColor = LightGreen.copy(alpha = 0.15f)),
                 shape = RoundedCornerShape(16.dp),

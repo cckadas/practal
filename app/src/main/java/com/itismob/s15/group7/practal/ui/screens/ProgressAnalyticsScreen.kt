@@ -421,36 +421,6 @@ fun InstrumentBreakdownItem(instrument: String, percentage: Int, color: Color) {
 }
 
 @Composable
-fun PracticeSessionItem(session: PracticeSession) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(WhiteBox)
-            .padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        InstrumentIcon(session.instrument)
-        Spacer(modifier = Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(session.instrument, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = DarkGreen, fontFamily = Poppins)
-            Text("${formatDuration(session.durationSeconds)} • ${session.practiceType}", fontSize = 12.sp, color = Color.Gray, fontFamily = Poppins)
-            if (session.pieceOrFocus.isNotEmpty()) {
-                Text(session.pieceOrFocus, fontSize = 11.sp, color = Color.Gray, fontFamily = Poppins, maxLines = 1)
-            }
-        }
-        Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(12.dp))
-                .background(DarkGreen.copy(alpha = 0.1f))
-                .padding(horizontal = 8.dp, vertical = 4.dp)
-        ) {
-            Text(formatDuration(session.durationSeconds), fontSize = 12.sp, color = DarkGreen, fontWeight = FontWeight.Medium, fontFamily = Poppins)
-        }
-    }
-}
-
-@Composable
 fun SessionItem(
     instrument: String, practiceType: String, pieceOrFocus: String,
     duration: String, date: String, difficulty: String
@@ -466,14 +436,14 @@ fun SessionItem(
         InstrumentIcon(instrument, 18.sp)
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text("$instrument • $practiceType", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = DarkGreen, fontFamily = Poppins)
+            Text("$instrument - $practiceType", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = DarkGreen, fontFamily = Poppins)
             if (pieceOrFocus.isNotEmpty()) {
                 Text(pieceOrFocus, fontSize = 12.sp, color = Color.Gray, fontFamily = Poppins)
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(duration, fontSize = 11.sp, color = Color.Gray.copy(alpha = 0.7f), fontFamily = Poppins)
                 if (difficulty.isNotEmpty()) {
-                    Text(" • $difficulty", fontSize = 11.sp, color = Color.Gray.copy(alpha = 0.7f), fontFamily = Poppins)
+                    Text(" - $difficulty", fontSize = 11.sp, color = Color.Gray.copy(alpha = 0.7f), fontFamily = Poppins)
                 }
             }
         }
