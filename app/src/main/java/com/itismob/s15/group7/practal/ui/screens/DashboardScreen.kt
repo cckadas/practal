@@ -12,13 +12,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
@@ -63,21 +63,91 @@ fun DashboardScreen(
     clubViewModel: ClubViewModel
 ) {
     var selectedTab by remember { mutableStateOf("home") }
+    var showFabMenu by remember { mutableStateOf(false) }
 
     Scaffold(
         bottomBar = { DashboardBottomBar(selectedTab) { selectedTab = it } },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = { navController.navigate("log_practice") },
-                containerColor = DarkGreen,
-                shape = CircleShape
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Add",
-                    tint = Color.White,
-                    modifier = Modifier.size(32.dp)
-                )
+                // Menu options
+                if (showFabMenu) {
+                    // Create regular post option
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Surface(
+                            color = Color.White,
+                            shape = RoundedCornerShape(8.dp),
+                            shadowElevation = 4.dp
+                        ) {
+                            Text(
+                                "Create Post",
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                fontFamily = Poppins,
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 14.sp
+                            )
+                        }
+                        SmallFloatingActionButton(
+                            onClick = {
+                                showFabMenu = false
+                                navController.navigate("create_post")
+                            },
+                            containerColor = Color.White,
+                            contentColor = DarkGreen
+                        ) {
+                            Icon(Icons.Default.Edit, "Create Post", modifier = Modifier.size(24.dp))
+                        }
+                    }
+                    
+                    // Log practice session option
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Surface(
+                            color = Color.White,
+                            shape = RoundedCornerShape(8.dp),
+                            shadowElevation = 4.dp
+                        ) {
+                            Text(
+                                "Practice Session",
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                fontFamily = Poppins,
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 14.sp
+                            )
+                        }
+                        SmallFloatingActionButton(
+                            onClick = {
+                                showFabMenu = false
+                                navController.navigate("log_practice")
+                            },
+                            containerColor = Color.White,
+                            contentColor = DarkGreen
+                        ) {
+                            Icon(Icons.Default.MusicNote, "Log Practice", modifier = Modifier.size(24.dp))
+                        }
+                    }
+                }
+                
+                // Main FAB
+                FloatingActionButton(
+                    onClick = { showFabMenu = !showFabMenu },
+                    containerColor = DarkGreen,
+                    shape = CircleShape
+                ) {
+                    Icon(
+                        imageVector = if (showFabMenu) Icons.Default.Close else Icons.Default.Add,
+                        contentDescription = if (showFabMenu) "Close" else "Add",
+                        tint = Color.White,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
             }
         },
         floatingActionButtonPosition = FabPosition.End,
@@ -248,8 +318,7 @@ fun PostCard(post: Post, userViewModel: UserViewModel, postViewModel: PostViewMo
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-
-
+            // header
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(12.dp)
@@ -305,31 +374,118 @@ fun PostCard(post: Post, userViewModel: UserViewModel, postViewModel: PostViewMo
                 }
             }
 
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp)
-                    .background(SoftGreen.copy(alpha = 0.5f)),
-
-            contentAlignment = Alignment.Center
-            ) {
-                if (post.post_img.isNotEmpty()) {
-                    AsyncImage(
-                        model = post.post_img,
-                        contentDescription = "Profile Picture",
-                        contentScale = ContentScale.Crop
-                    )
-                } else {
-                    Icon(
-                        Icons.Default.Image,
-                        contentDescription = "Post Image",
-                        tint = CardAccent.copy(alpha = 0.7f),
-                        modifier = Modifier.size(64.dp)
-                    )
+            // Content - different based on post type
+            when (post) {
+                is Post.RegularPost -> {
+                    // Regular post with image (only show if image exists)
+                    if (post.post_img.isNotEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(200.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            AsyncImage(
+                                model = post.post_img,
+                                contentDescription = "Post Image",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+                    }
+                }
+                is Post.PracticePost -> {
+                    // session post
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(SoftGreen.copy(alpha = 0.15f))
+                            .padding(16.dp)
+                    ) {
+                        // season header
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Default.MusicNote,
+                                contentDescription = null,
+                                tint = DarkGreen,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                "Practice Session",
+                                fontWeight = FontWeight.Bold,
+                                color = DarkGreen,
+                                fontSize = 16.sp,
+                                fontFamily = Poppins
+                            )
+                        }
+                        
+                        Spacer(Modifier.height(12.dp))
+                        
+                        // session details
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column {
+                                Text("Instrument", fontSize = 12.sp, color = Color.Gray, fontFamily = Poppins)
+                                Text(post.instrument, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, fontFamily = Poppins)
+                            }
+                            Column {
+                                Text("Duration", fontSize = 12.sp, color = Color.Gray, fontFamily = Poppins)
+                                Text("${post.durationMinutes} min", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, fontFamily = Poppins)
+                            }
+                            Column {
+                                Text("Difficulty", fontSize = 12.sp, color = Color.Gray, fontFamily = Poppins)
+                                Text(post.difficulty, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, fontFamily = Poppins)
+                            }
+                        }
+                        
+                        Spacer(Modifier.height(8.dp))
+                        
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column {
+                                Text("Practice Type", fontSize = 12.sp, color = Color.Gray, fontFamily = Poppins)
+                                Text(post.practiceType, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, fontFamily = Poppins)
+                            }
+                            Column {
+                                Text("XP Earned", fontSize = 12.sp, color = Color.Gray, fontFamily = Poppins)
+                                Text("+${post.earnedXP} XP", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = DarkGreen, fontFamily = Poppins)
+                            }
+                        }
+                        
+                        if (post.pieceOrFocus.isNotEmpty()) {
+                            Spacer(Modifier.height(8.dp))
+                            Text("Focus", fontSize = 12.sp, color = Color.Gray, fontFamily = Poppins)
+                            Text(post.pieceOrFocus, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, fontFamily = Poppins)
+                        }
+                        
+                        // optional img
+                        if (post.post_img.isNotEmpty()) {
+                            Spacer(Modifier.height(12.dp))
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(200.dp)
+                                    .clip(RoundedCornerShape(12.dp)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                AsyncImage(
+                                    model = post.post_img,
+                                    contentDescription = "Practice Image",
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                        }
+                    }
                 }
             }
 
-
+            // caption
             Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
                 Text(
                     text = post.caption,
