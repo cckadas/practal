@@ -30,11 +30,13 @@ import com.itismob.s15.group7.practal.domain.controller.ClubViewModel
 import com.itismob.s15.group7.practal.ui.screens.AchievementsScreen
 import com.itismob.s15.group7.practal.ui.screens.ChallengeDetailScreen
 import com.itismob.s15.group7.practal.ui.screens.ChallengeScreen
+import com.itismob.s15.group7.practal.ui.screens.ClubDetailScreen
 import com.itismob.s15.group7.practal.ui.screens.ClubsScreen
 import com.itismob.s15.group7.practal.ui.screens.CompletedProfileScreen
 import com.itismob.s15.group7.practal.ui.screens.CreatePostScreen
 import com.itismob.s15.group7.practal.ui.screens.CreatePracticePostScreen
 import com.itismob.s15.group7.practal.ui.screens.DashboardScreen
+import com.itismob.s15.group7.practal.ui.screens.FollowListScreen
 import com.itismob.s15.group7.practal.ui.screens.GoalSkillInfoScreen
 import com.itismob.s15.group7.practal.ui.screens.IntroductionScreen
 import com.itismob.s15.group7.practal.ui.screens.LeaderboardScreen
@@ -98,6 +100,13 @@ fun PractalApp() {
             viewModel = userViewModel
         ) }
         composable("clubs") { ClubsScreen(navController, clubViewModel, userViewModel) }
+        composable(
+            route = "club_detail/{clubId}",
+            arguments = listOf(navArgument("clubId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val clubId = backStackEntry.arguments?.getString("clubId") ?: ""
+            ClubDetailScreen(navController, clubViewModel, userViewModel, clubId)
+        }
 
         composable("challenges") { ChallengeScreen(navController, userViewModel, challengeViewModel) }
         composable("challenge_detail/{challenge_id}") { backStackEntry ->
@@ -112,6 +121,17 @@ fun PractalApp() {
         composable("other_profile/{email}") { backStackEntry ->
             val email = backStackEntry.arguments?.getString("email") ?: ""
             OtherProfileScreen(navController, userViewModel, email, achievementViewModel)
+        }
+        composable(
+            route = "follow_list/{userEmail}/{listType}",
+            arguments = listOf(
+                navArgument("userEmail") { type = NavType.StringType },
+                navArgument("listType") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val userEmail = backStackEntry.arguments?.getString("userEmail") ?: ""
+            val listType = backStackEntry.arguments?.getString("listType") ?: "followers"
+            FollowListScreen(navController, userViewModel, userEmail, listType)
         }
 
         // post creation routes
